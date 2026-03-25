@@ -120,6 +120,7 @@ body{font-family:var(--fb);background:var(--rc);color:var(--rt);font-size:13px;l
 <button class="ab" data-axis="season-cat" onclick="setAx('season-cat')">季節×カテゴリ</button>
 <button class="ab" data-axis="season-lv" onclick="setAx('season-lv')">季節×レベル</button>
 <button class="ab" data-axis="star-cat" onclick="setAx('star-cat')">おすすめ×カテゴリ</button>
+<button class="ab" id="mxToggleAll" onclick="toggleAllMx()" style="margin-left:12px;border-style:dashed">全展開 ▼</button>
 </div><div id="mE"></div></div>
 <div id="simView" style="display:none"><div class="st">Mixing Simulator</div><div class="ss">薬剤と比率を自由に設定 ─ 白髪率による発色変化もリアルタイム確認</div><div class="dv"></div>
 <div class="sb"><h3>調合設定</h3><div id="sSlots"></div><button class="sad" onclick="addS()">＋ 薬剤を追加</button>
@@ -645,7 +646,7 @@ function renderList(){
 }
 
 let curAx='lv-cat';
-function setAx(a){curAx=a;document.querySelectorAll('.ab').forEach(b=>b.classList.toggle('active',b.dataset.axis===a));renderMx();}
+function setAx(a){curAx=a;mxAllOpen=false;const tb=document.getElementById('mxToggleAll');if(tb)tb.textContent='全展開 ▼';document.querySelectorAll('.ab').forEach(b=>b.classList.toggle('active',b.dataset.axis===a));renderMx();}
 let mxCellId=0;
 function mxC(items){
   if(!items.length)return'<td style="color:#ddd">—</td>';
@@ -665,6 +666,20 @@ function toggleMxCell(id,el){
   const d=document.getElementById(id);
   if(d.style.display==='none'){d.style.display='';el.textContent='▲ 閉じる';}
   else{d.style.display='none';el.textContent='+'+d.children.length+'色 ▼';}
+}
+let mxAllOpen=false;
+function toggleAllMx(){
+  mxAllOpen=!mxAllOpen;
+  const btn=document.getElementById('mxToggleAll');
+  document.querySelectorAll('.mx-expand').forEach(el=>{
+    const id=el.getAttribute('onclick').match(/'(mc\d+)'/);
+    if(!id)return;
+    const d=document.getElementById(id[1]);
+    if(!d)return;
+    if(mxAllOpen){d.style.display='';el.textContent='▲ 閉じる';}
+    else{d.style.display='none';el.textContent='+'+d.children.length+'色 ▼';}
+  });
+  btn.textContent=mxAllOpen?'全折りたたみ ▲':'全展開 ▼';
 }
 function renderMx(){mxCellId=0;
   const f=getF();
