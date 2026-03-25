@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INNO IROCA カラーレシピ＆調合シミュレーター v4 | REVOL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Cormorant+Garamond:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--rr:#C42034;--rd:#2C2C2C;--rt:#3A3A3A;--rl:#F8F6F3;--rc:#FAF8F5;--rb:#E8E4DE;--rg:#9A9590;--rw:#8B7355;--fd:'Cormorant Garamond',serif;--fb:'Noto Sans JP',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--fb);background:var(--rc);color:var(--rt);font-size:13px;line-height:1.7}
+::selection{background:var(--rr);color:#fff}
+.hdr{background:#fff;border-bottom:1px solid var(--rb);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.hdr .logo{font-family:var(--fd);font-size:22px;font-weight:600;color:var(--rd);letter-spacing:2px}
+.hdr .logo span{color:var(--rr)}
+.hdr .sub{font-size:10px;color:var(--rg);letter-spacing:1px}
+.nav{display:flex;gap:2px;background:#fff;padding:6px 16px;border-bottom:1px solid var(--rb);justify-content:center;flex-wrap:wrap;position:sticky;top:47px;z-index:49}
+.nb{padding:7px 18px;border:none;background:none;cursor:pointer;font-family:var(--fb);font-size:12px;color:var(--rg);border-radius:4px;transition:.2s;font-weight:500;letter-spacing:.5px}
+.nb:hover{color:var(--rt);background:var(--rl)}
+.nb.active{color:var(--rr);background:rgba(196,32,52,.06);font-weight:700}
+
+/* Global white hair slider */
+.gw-bar{background:#fff;border-bottom:1px solid var(--rb);padding:10px 20px;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;position:sticky;top:83px;z-index:48}
+.gw-bar label{font-size:11px;color:var(--rw);font-weight:700}
+.gw-bar input[type=range]{width:200px;accent-color:var(--rr)}
+.gw-bar .val{font-size:13px;font-weight:700;color:var(--rr);min-width:36px;text-align:center}
+.gw-btn{padding:3px 10px;border:1px solid var(--rb);border-radius:4px;cursor:pointer;font-size:10px;background:#fff;color:var(--rt);font-family:var(--fb);transition:.15s}
+.gw-btn:hover,.gw-btn.on{border-color:var(--rr);color:var(--rr)}
+
+.sec{max-width:1100px;margin:0 auto;padding:16px}
+.st{font-family:var(--fd);font-size:24px;font-weight:500;color:var(--rd);text-align:center;margin-bottom:4px;letter-spacing:1px}
+.ss{text-align:center;font-size:11px;color:var(--rg);margin-bottom:16px}
+.dv{width:40px;height:2px;background:var(--rr);margin:6px auto 16px}
+.fr{display:flex;gap:6px;justify-content:center;margin-bottom:12px;flex-wrap:wrap}
+.fr select{padding:5px 12px;border:1px solid var(--rb);border-radius:4px;background:#fff;color:var(--rt);font-size:11px;font-family:var(--fb)}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px}
+.cl{grid-column:1/-1;font-size:13px;font-weight:700;color:var(--rw);margin-top:14px;padding:5px 0;border-bottom:1px solid var(--rb);letter-spacing:1px}
+.cd{display:flex;align-items:center;gap:8px;background:#fff;border-radius:6px;padding:8px 10px;border:1px solid var(--rb);cursor:pointer;transition:.2s}
+.cd:hover{border-color:var(--rr);box-shadow:0 2px 10px rgba(196,32,52,.08)}
+.sw{width:42px;height:42px;border-radius:50%;flex-shrink:0;border:2px solid rgba(0,0,0,.06);box-shadow:inset 0 1px 3px rgba(0,0,0,.15)}
+.ci .nm{font-size:12px;font-weight:700;color:var(--rd)}.ci .stars{color:var(--rr);font-size:11px}
+.ci .mt{font-size:10px;color:var(--rg);margin-top:1px}.ci .rc{font-size:10px;color:var(--rw);margin-top:1px}
+
+.mw{overflow-x:auto;background:#fff;border-radius:8px;border:1px solid var(--rb);padding:4px}
+.mx{border-collapse:collapse;width:100%;min-width:880px;table-layout:fixed}
+.mx th,.mx td{border:1px solid var(--rb);padding:3px;text-align:center;font-size:9px;vertical-align:top;overflow:hidden;word-break:break-all}
+.mx th{background:var(--rl);color:var(--rw);font-weight:700;padding:5px 3px}
+.mx th:first-child,.mx td:first-child{width:55px;min-width:55px;max-width:55px;background:var(--rl);color:var(--rw);font-weight:700;position:sticky;left:0;z-index:1}
+.mx th:first-child{z-index:3}
+.csw{width:30px;height:22px;border-radius:3px;margin:0 auto 1px;border:1px solid rgba(0,0,0,.08)}
+.cn{font-size:7px;color:var(--rg);max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0 auto}
+.ab{padding:4px 10px;border:1px solid var(--rb);border-radius:4px;cursor:pointer;font-size:10px;background:#fff;color:var(--rt);font-family:var(--fb);transition:.15s;margin:2px}
+.ab:hover,.ab.active{border-color:var(--rr);color:var(--rr);background:rgba(196,32,52,.04);font-weight:700}
+
+.sb{background:#fff;border:1px solid var(--rb);border-radius:8px;padding:16px;margin-bottom:12px}
+.sb h3{font-family:var(--fd);font-size:17px;color:var(--rd);margin-bottom:10px}
+.sr{display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+.sr label{width:26px;text-align:right;font-size:11px;color:var(--rg);font-weight:700}
+.sr select,.sr input[type=number]{padding:4px 7px;border:1px solid var(--rb);border-radius:4px;background:#fff;color:var(--rt);font-size:12px;font-family:var(--fb)}
+.sr input[type=range]{width:100px;accent-color:var(--rr)}
+.sr .vl{width:30px;text-align:center;font-size:10px;color:var(--rg)}
+.sr .ms{width:20px;height:20px;border-radius:50%;border:1px solid rgba(0,0,0,.1);flex-shrink:0}
+.srm{cursor:pointer;color:var(--rr);font-size:13px;opacity:.6}.srm:hover{opacity:1}
+.sad{padding:5px 12px;border:1px dashed var(--rb);border-radius:6px;cursor:pointer;color:var(--rg);font-size:11px;background:none;margin-top:4px;font-family:var(--fb)}.sad:hover{border-color:var(--rr);color:var(--rr)}
+.sres{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;margin-top:10px}
+.sbig{width:90px;height:90px;border-radius:50%;border:3px solid rgba(0,0,0,.06);box-shadow:0 3px 16px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.sdt{flex:1;font-size:11px;line-height:1.8;min-width:180px}
+.sdt code{background:var(--rl);padding:1px 4px;border-radius:3px;font-size:10px;color:var(--rw)}
+.snr{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.sni{text-align:center;cursor:pointer}.sni .nsw{width:34px;height:34px;border-radius:50%;border:1px solid rgba(0,0,0,.08);margin:0 auto 2px}.sni .nlb{font-size:8px;color:var(--rg);max-width:58px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmp{display:flex;gap:6px;align-items:center;margin-top:8px}.cmp .csw2{width:50px;height:50px;border-radius:10px;border:1px solid rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700}.cmp .clb{font-size:9px;color:var(--rg);text-align:center}
+
+.tb{background:#fff;border:1px solid var(--rb);border-radius:8px;padding:16px;font-size:11px;line-height:1.9}
+.tb h3{font-family:var(--fd);font-size:17px;color:var(--rd);margin-bottom:8px}
+.tb table{width:100%;border-collapse:collapse;margin:6px 0}.tb td,.tb th{border:1px solid var(--rb);padding:3px 5px;font-size:10px;text-align:center}.tb th{background:var(--rl);color:var(--rw);font-weight:700}
+
+.mo{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:100;justify-content:center;align-items:center}.mo.show{display:flex}
+.mi{background:#fff;border-radius:10px;padding:20px;max-width:480px;width:92%;max-height:80vh;overflow-y:auto}
+.mc{float:right;cursor:pointer;font-size:18px;color:var(--rg);line-height:1}.mc:hover{color:var(--rr)}
+.msw{width:70px;height:70px;border-radius:50%;margin:10px auto;border:3px solid rgba(0,0,0,.06);box-shadow:0 3px 12px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px}
+.mcl{font-size:10px;line-height:1.8;margin-top:8px;background:var(--rl);padding:10px;border-radius:6px}
+.bsm{margin-top:8px;padding:5px 14px;border-radius:4px;border:1px solid var(--rr);background:none;color:var(--rr);cursor:pointer;font-size:11px;font-family:var(--fb);transition:.15s}.bsm:hover{background:var(--rr);color:#fff}
+.ft{text-align:center;padding:20px;font-size:10px;color:var(--rg);margin-top:16px;border-top:1px solid var(--rb)}
+</style>
+</head>
+<body>
+<div class="hdr"><div><div class="logo">INNO <span>IROCA</span></div><div class="sub">カラーレシピ＆調合シミュレーター v4 ─ REVOL</div></div><div style="font-size:10px;color:var(--rg)">204色 ─ 画像実測RGB ─ 白髪率対応</div></div>
+<div class="nav">
+<button class="nb active" onclick="sw('list')">カラーリスト</button>
+<button class="nb" onclick="sw('matrix')">マトリクス</button>
+<button class="nb" onclick="sw('sim')">調合シミュレーター</button>
+<button class="nb" onclick="sw('theory')">計算根拠</button>
+</div>
+<div class="gw-bar">
+<label>白髪率:</label>
+<input type="range" id="gwSlider" min="0" max="100" value="30" oninput="setGW(this.value)">
+<span class="val" id="gwVal">30%</span>
+<button class="gw-btn" onclick="setGW(0)">0%</button>
+<button class="gw-btn on" onclick="setGW(30)">30%</button>
+<button class="gw-btn" onclick="setGW(50)">50%</button>
+<button class="gw-btn" onclick="setGW(80)">80%</button>
+<button class="gw-btn" onclick="setGW(100)">100%</button>
+</div>
+<div class="sec">
+<div class="fr">
+<select id="cf" onchange="render()"><option value="">全カテゴリ</option></select>
+<select id="lf" onchange="render()"><option value="">全レベル</option><option>3</option><option>4</option><option>5</option><option>5-6</option><option>6</option><option>6-7</option><option>7</option><option>8</option><option>9</option><option>10</option></select>
+<select id="sf" onchange="render()"><option value="">全おすすめ</option><option value="3">★★★</option><option value="2">★★以上</option><option value="1">★以上</option></select>
+</div>
+<div id="listView"><div class="st">Color Recipe Collection</div><div class="ss">INNO IROCA 調合マッピング 204色 ─ 白髪率スライダーで全色がリアルタイム変化</div><div class="dv"></div><div class="grid" id="gE"></div></div>
+<div id="matrixView" style="display:none"><div class="st">Color Matrix</div><div class="ss">軸の組み合わせを選んで色の関係性を俯瞰</div><div class="dv"></div>
+<div style="display:flex;gap:4px;justify-content:center;margin-bottom:12px;flex-wrap:wrap">
+<button class="ab active" data-axis="lv-cat" onclick="setAx('lv-cat')">レベル×カテゴリ</button>
+<button class="ab" data-axis="pc-cat" onclick="setAx('pc-cat')">PC×カテゴリ</button>
+<button class="ab" data-axis="pc-lv" onclick="setAx('pc-lv')">PC×レベル</button>
+<button class="ab" data-axis="season-cat" onclick="setAx('season-cat')">季節×カテゴリ</button>
+<button class="ab" data-axis="season-lv" onclick="setAx('season-lv')">季節×レベル</button>
+<button class="ab" data-axis="star-cat" onclick="setAx('star-cat')">おすすめ×カテゴリ</button>
+</div><div id="mE"></div></div>
+<div id="simView" style="display:none"><div class="st">Mixing Simulator</div><div class="ss">薬剤と比率を自由に設定 ─ 白髪率による発色変化もリアルタイム確認</div><div class="dv"></div>
+<div class="sb"><h3>調合設定</h3><div id="sSlots"></div><button class="sad" onclick="addS()">＋ 薬剤を追加</button>
+<div style="margin-top:8px;display:flex;align-items:center;gap:8px"><span style="font-size:11px;color:var(--rg)">仕上がりLv:</span><select id="sLv" onchange="cS()" style="padding:3px 7px;border:1px solid var(--rb);border-radius:4px;font-size:12px;background:#fff"><option>3</option><option>4</option><option>5</option><option>6</option><option selected>7</option><option>8</option><option>9</option><option>10</option></select></div>
+<div style="margin-top:8px"><span style="font-size:11px;color:var(--rg)">プリセット:</span></div><div id="prs" style="margin-top:4px;display:flex;flex-wrap:wrap;gap:3px"></div></div>
+<div class="sb"><h3>シミュレーション結果</h3>
+<div class="cmp" id="sCmp"></div>
+<div class="sres"><div class="sbig" id="sSw">—</div><div class="sdt" id="sIn">薬剤を追加してください</div></div>
+<div style="margin-top:10px;font-size:11px;color:var(--rg)">近い色のレシピ候補:</div><div class="snr" id="sNr"></div></div></div>
+<div id="theoryView" style="display:none"><div class="st">Calculation Theory</div><div class="ss">v4: 画像実測 白髪/黒髪デュアルRGBモデル</div><div class="dv"></div>
+<div class="tb"><h3>v4: 白髪/黒髪デュアルRGBモデル</h3>
+<p>v4では、提供された実物IROCA色見本画像から<strong>Pythonのpillowで各スウォッチの左（白髪100%）と右（黒髪100%）のRGBを直接ピクセル抽出</strong>しました。</p>
+<p style="margin-top:6px"><strong>発色計算フロー:</strong></p>
+<p>1. 白髪率(0〜100%)を設定</p>
+<p>2. 各薬剤の「この白髪率での色」を線形補間: <code>color = lerp(黒髪RGB, 白髪RGB, 白髪率)</code></p>
+<p>3. 複数薬剤を減法混色(対数空間加重平均): <code>ch = exp(Σ(w×ln(ch_i))/Σw)</code></p>
+<p>4. ガンマ補正 γ=0.97</p>
+<table style="margin-top:10px"><tr><th>コード</th><th>白髪100% (R,G,B)</th><th>黒髪100% (R,G,B)</th><th>根拠</th></tr>
+<tr><td>N3</td><td>(57,47,42)</td><td>(14,9,9)</td><td>画像左下最暗スウォッチ</td></tr>
+<tr><td>N5</td><td>(72,60,46)</td><td>(41,30,22)</td><td>Lv5ナチュラル</td></tr>
+<tr><td>N7</td><td>(86,78,52)</td><td>(54,48,33)</td><td>Lv7ナチュラル</td></tr>
+<tr><td>N9</td><td>(105,95,60)</td><td>(70,65,42)</td><td>Lv9ナチュラル</td></tr>
+<tr><td>Y5</td><td>(81,58,40)</td><td>(40,28,20)</td><td>Lv5イエロー</td></tr>
+<tr><td>Y7</td><td>(129,99,62)</td><td>(52,37,27)</td><td>Lv7イエロー</td></tr>
+<tr><td>Y9</td><td>(153,121,71)</td><td>(90,71,50)</td><td>Lv9イエロー</td></tr>
+<tr><td>R5</td><td>(74,53,51)</td><td>(26,14,17)</td><td>Lv5レッド</td></tr>
+<tr><td>R7</td><td>(92,62,55)</td><td>(54,28,29)</td><td>Lv7レッド</td></tr>
+<tr><td>R9</td><td>(143,115,98)</td><td>(74,34,33)</td><td>Lv9レッド</td></tr>
+<tr><td>B</td><td>(66,79,97)</td><td>(37,41,43)</td><td>ブルーアクセント</td></tr>
+<tr><td>L</td><td>(205,195,178)</td><td>(130,100,72)</td><td>ライトナー</td></tr></table></div></div>
+</div>
+<div class="ft">INNO IROCA カラーレシピ＆調合シミュレーター v4 ─ 株式会社レボル<br>※シミュレーションは参考値です。実際の発色は毛質・ダメージ・施術条件により異なります。</div>
+<div class="mo" id="modal" onclick="if(event.target===this)cM()"><div class="mi"><span class="mc" onclick="cM()">✕</span><div id="mC"></div></div></div>
+
+<script>
+
+const BC = {
+  // Image-extracted: w = white hair 100%, b = black hair 100%
+  N3:  { w:[57,47,42],   b:[14,9,9]     },
+  N5:  { w:[72,60,46],   b:[41,30,22]   },
+  N7:  { w:[86,78,52],   b:[54,48,33]   },
+  N9:  { w:[105,95,60],  b:[70,65,42]   },
+  Y5:  { w:[81,58,40],   b:[40,28,20]   },
+  Y7:  { w:[129,99,62],  b:[52,37,27]   },
+  Y9:  { w:[153,121,71], b:[90,71,50]   },
+  R5:  { w:[74,53,51],   b:[26,14,17]   },
+  R7:  { w:[92,62,55],   b:[54,28,29]   },
+  R9:  { w:[143,115,98], b:[74,34,33]   },
+  B:   { w:[66,79,97],   b:[37,41,43]   },
+  L:   { w:[205,195,178], b:[130,100,72] },
+  // Gray color products (same as N-level equivalents)
+  '5': { w:[72,60,46],   b:[41,30,22]   },
+  '7': { w:[86,78,52],   b:[54,48,33]   },
+  '9': { w:[105,95,60],  b:[70,65,42]   },
+};
+
+let gw=30; // global white hair %
+
+function setGW(v){
+  gw=parseInt(v);document.getElementById('gwSlider').value=gw;document.getElementById('gwVal').textContent=gw+'%';
+  document.querySelectorAll('.gw-btn').forEach(b=>b.classList.toggle('on',parseInt(b.textContent)===gw));
+  R.forEach(r=>compute(r));render();cS();
+}
+
+function lerp(a,b,t){return a+(b-a)*t;}
+function drugRGB(code){
+  const c=BC[code];if(!c)return[60,50,40];
+  const t=gw/100;
+  return[lerp(c.b[0],c.w[0],t), lerp(c.b[1],c.w[1],t), lerp(c.b[2],c.w[2],t)];
+}
+function drugRGBat(code,wh){
+  const c=BC[code];if(!c)return[60,50,40];
+  const t=wh/100;
+  return[lerp(c.b[0],c.w[0],t), lerp(c.b[1],c.w[1],t), lerp(c.b[2],c.w[2],t)];
+}
+
+function mixC(comps,whPct){
+  const wh=whPct!=null?whPct:gw;
+  let tw=0,lr=0,lg=0,lb=0,ds=[];
+  for(const c of comps){const rgb=drugRGBat(c.code,wh);const w=c.weight;tw+=w;
+    lr+=w*Math.log(Math.max(rgb[0],1));lg+=w*Math.log(Math.max(rgb[1],1));lb+=w*Math.log(Math.max(rgb[2],1));
+    ds.push({code:c.code,w,rgb:rgb.map(v=>Math.round(v))});}
+  if(!tw)return{r:40,g:35,b:28,ds,tw:0};
+  return{r:Math.exp(lr/tw),g:Math.exp(lg/tw),b:Math.exp(lb/tw),ds,tw};
+}
+function cl(v){return Math.max(0,Math.min(255,Math.round(v)));}
+
+function computeRaw(comps,whPct){
+  if(!comps.length)return{hex:'#282420',rgb:[40,36,32],steps:''};
+  const m=mixC(comps,whPct);let[r,g,b]=[m.r,m.g,m.b];
+  const gm=0.97;r=Math.pow(r/255,1/gm)*255;g=Math.pow(g/255,1/gm)*255;b=Math.pow(b/255,1/gm)*255;
+  r=cl(r);g=cl(g);b=cl(b);
+  const hex='#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
+  let s='';for(const d of m.ds)s+=d.code+'('+d.rgb.join(',')+')×'+d.w+'\n';
+  s+='白髪率:'+(whPct!=null?whPct:gw)+'% 混色→('+m.r.toFixed(0)+','+m.g.toFixed(0)+','+m.b.toFixed(0)+') γ0.97→('+r+','+g+','+b+') '+hex;
+  return{hex,rgb:[r,g,b],steps:s};
+}
+
+function parseR(mx,rt){
+  if(mx.includes('ベース')||mx.includes('アクセント')){
+    const c=[];const nm=mx.match(/(\d)\+(\d)/);
+    if(nm){const rs=rt.replace(/\/.*/,'').replace(/\+.*/,'').trim().split(':').map(s=>parseFloat(s));
+      c.push({code:nm[1],weight:rs[0]||1});c.push({code:nm[2],weight:rs[1]||1});}
+    if(mx.includes('ベースR'))c.push({code:'R7',weight:0.3});
+    if(mx.includes('ベースY'))c.push({code:'Y7',weight:0.3});
+    if(mx.includes('アクセントB')||mx.includes('アクセントR+B'))c.push({code:'B',weight:0.15});
+    if(mx.includes('アクセントR')&&!mx.includes('アクセントR+'))c.push({code:'R7',weight:0.15});
+    return c;}
+  const ps=mx.replace(/単品/,'').split('+').map(s=>s.trim()).filter(Boolean);
+  const rs=rt.replace(/\/.*/,'').split(':').map(s=>parseFloat(s));
+  const c=[];for(let i=0;i<ps.length;i++){const code=ps[i];const w=(i<rs.length&&!isNaN(rs[i]))?rs[i]:1;if(BC[code])c.push({code,weight:w});}
+  return c;
+}
+function compute(r){const comps=parseR(r.mix,r.ratio);const res=computeRaw(comps);r.hex=res.hex;r.rgb=res.rgb;r.steps=res.steps;r.comps=comps;}
+
+const R=[
+{n:1,cat:'ナチュラルブラウン',name:'ダークナチュラル',level:'3',mix:'N3',ratio:'—',star:'',desc:'黒髪に近い自然な暗髪',pc:'ALL',season:'通年'},
+{n:2,cat:'ナチュラルブラウン',name:'ディープブラウン',level:'4',mix:'N3+N5',ratio:'1:1',star:'',desc:'深みのある落ち着いたブラウン',pc:'ALL',season:'秋冬'},
+{n:3,cat:'ナチュラルブラウン',name:'ナチュラルブラウン',level:'5',mix:'N5',ratio:'—',star:'★',desc:'万人受けする自然な茶色',pc:'ALL',season:'通年'},
+{n:4,cat:'ナチュラルブラウン',name:'ソフトブラウン',level:'5-6',mix:'N5+N7',ratio:'2:1',star:'',desc:'柔らかみのあるブラウン',pc:'ALL',season:'春'},
+{n:5,cat:'ナチュラルブラウン',name:'ウォームブラウン',level:'6',mix:'N5+Y7',ratio:'2:1',star:'★',desc:'温かみを感じるブラウン',pc:'イエベ',season:'秋'},
+{n:6,cat:'ナチュラルブラウン',name:'ミディアムブラウン',level:'7',mix:'N7',ratio:'—',star:'',desc:'オフィス定番の明るさ',pc:'ALL',season:'通年'},
+{n:7,cat:'ナチュラルブラウン',name:'マロンブラウン',level:'6',mix:'N5+R7',ratio:'3:1',star:'★★',desc:'栗色の上品なブラウン',pc:'イエベ秋',season:'秋冬'},
+{n:8,cat:'ナチュラルブラウン',name:'キャラメルブラウン',level:'7',mix:'N7+Y7',ratio:'2:1',star:'★',desc:'ほんのり黄味ブラウン',pc:'イエベ春',season:'春'},
+{n:9,cat:'ナチュラルブラウン',name:'シナモンブラウン',level:'7',mix:'N7+R7',ratio:'3:1',star:'',desc:'スパイシー赤みブラウン',pc:'イエベ秋',season:'秋'},
+{n:10,cat:'ナチュラルブラウン',name:'ライトブラウン',level:'8',mix:'N7+N9',ratio:'1:1',star:'',desc:'明るめオフィスブラウン',pc:'ALL',season:'春夏'},
+{n:11,cat:'ナチュラルブラウン',name:'ハニーブラウン',level:'8',mix:'N7+Y9',ratio:'2:1',star:'★',desc:'はちみつ艶ブラウン',pc:'イエベ春',season:'春夏'},
+{n:12,cat:'ナチュラルブラウン',name:'ナッツブラウン',level:'7',mix:'N7+Y7+R7',ratio:'2:1:0.5',star:'',desc:'こっくり深みブラウン',pc:'イエベ秋',season:'秋冬'},
+{n:13,cat:'ナチュラルブラウン',name:'ブライトブラウン',level:'9',mix:'N9',ratio:'—',star:'',desc:'華やかな明るいブラウン',pc:'ALL',season:'春夏'},
+{n:14,cat:'ナチュラルブラウン',name:'ゴールドブラウン',level:'9',mix:'N9+Y9',ratio:'2:1',star:'',desc:'ゴールド輝きブラウン',pc:'イエベ春',season:'夏'},
+{n:15,cat:'ナチュラルブラウン',name:'クリアブラウン',level:'10',mix:'N9+L',ratio:'2:1',star:'',desc:'透明感最明ブラウン',pc:'イエベ春',season:'春夏'},
+{n:16,cat:'ショコラ/モカ',name:'ビターショコラ',level:'4',mix:'N3+R5',ratio:'2:1',star:'',desc:'深いチョコレート',pc:'ブルベ冬',season:'秋冬'},
+{n:17,cat:'ショコラ/モカ',name:'ダークモカ',level:'5',mix:'R5+N5',ratio:'1:2',star:'★',desc:'深みコーヒー色',pc:'ブルベ冬',season:'秋冬'},
+{n:18,cat:'ショコラ/モカ',name:'ショコラブラウン',level:'5-6',mix:'N5+R5+Y5',ratio:'2:1:0.5',star:'★★',desc:'定番ショコラ肌映え◎',pc:'ALL',season:'通年'},
+{n:19,cat:'ショコラ/モカ',name:'モカブラウン',level:'6',mix:'N5+R7+Y7',ratio:'2:1:0.5',star:'★★',desc:'トレンドのモカ',pc:'ALL',season:'秋冬'},
+{n:20,cat:'ショコラ/モカ',name:'カフェモカ',level:'6-7',mix:'R5+Y7+N7',ratio:'1:1:1',star:'★',desc:'まろやかカフェオレ風',pc:'イエベ',season:'秋'},
+{n:21,cat:'ショコラ/モカ',name:'ミルクショコラ',level:'7',mix:'R7+Y7+N7',ratio:'1:1:2',star:'',desc:'やわらかショコラ',pc:'イエベ春',season:'春'},
+{n:22,cat:'ショコラ/モカ',name:'ショコラベージュ',level:'8',mix:'R7+Y9+N9',ratio:'1:1:2',star:'★★',desc:'色持ち肌映え',pc:'ALL',season:'通年'},
+{n:23,cat:'ショコラ/モカ',name:'ほうじ茶ラテ',level:'7',mix:'Y7+R5+N7',ratio:'2:1:1',star:'',desc:'和テイスト温かみ',pc:'イエベ秋',season:'秋'},
+{n:24,cat:'ショコラ/モカ',name:'エスプレッソ',level:'4',mix:'N3+R5+B',ratio:'3:1:0.3',star:'',desc:'深い赤み暗髪',pc:'ブルベ冬',season:'冬'},
+{n:25,cat:'ショコラ/モカ',name:'チョコレートブラウン',level:'5',mix:'N5+R5',ratio:'2:1',star:'★',desc:'王道チョコレート',pc:'ALL',season:'秋冬'},
+{n:26,cat:'ショコラ/モカ',name:'カカオブラウン',level:'6',mix:'R5+N7+B',ratio:'1:2:0.2',star:'',desc:'ほろ苦い深みブラウン',pc:'ブルベ',season:'秋冬'},
+{n:27,cat:'ショコラ/モカ',name:'プラリネ',level:'8',mix:'Y7+R7+N9',ratio:'1:1:1',star:'',desc:'甘くて明るいショコラ',pc:'イエベ春',season:'春'},
+{n:28,cat:'ショコラ/モカ',name:'チェリーショコラ',level:'6',mix:'R5+R7+N5',ratio:'1:1:1',star:'★',desc:'赤みチョコ',pc:'ブルベ冬',season:'秋冬'},
+{n:29,cat:'ベージュ',name:'ダークベージュ',level:'5',mix:'Y5+N5',ratio:'1:2',star:'',desc:'落ち着いたベージュ',pc:'ALL',season:'秋冬'},
+{n:30,cat:'ベージュ',name:'ナチュラルベージュ',level:'6',mix:'Y5+N7',ratio:'1:2',star:'★',desc:'自然なベージュ',pc:'ALL',season:'通年'},
+{n:31,cat:'ベージュ',name:'ウォームベージュ',level:'7',mix:'Y7+N7',ratio:'1:1',star:'★',desc:'温かみベージュ',pc:'イエベ',season:'通年'},
+{n:32,cat:'ベージュ',name:'ヘーゼルベージュ',level:'7',mix:'Y7+N7+R7',ratio:'2:2:0.5',star:'★★',desc:'トレンドヘーゼル',pc:'イエベ春',season:'春夏'},
+{n:33,cat:'ベージュ',name:'クリーミーベージュ',level:'8',mix:'Y7+N9',ratio:'1:1',star:'',desc:'クリーミー明るめ',pc:'イエベ春',season:'春'},
+{n:34,cat:'ベージュ',name:'ヌードベージュ',level:'8',mix:'Y9+N7',ratio:'1:1',star:'★',desc:'素肌溶け込み',pc:'ALL',season:'通年'},
+{n:35,cat:'ベージュ',name:'シアーベージュ',level:'9',mix:'Y9+N9',ratio:'1:1',star:'★★',desc:'透け感ベージュ人気',pc:'イエベ春',season:'春夏'},
+{n:36,cat:'ベージュ',name:'ゴールドベージュ',level:'9',mix:'Y9+N9',ratio:'2:1',star:'',desc:'ゴールド寄り',pc:'イエベ春',season:'夏'},
+{n:37,cat:'ベージュ',name:'ライトベージュ',level:'10',mix:'Y9+L',ratio:'1:1',star:'',desc:'ハイトーン',pc:'イエベ春',season:'春夏'},
+{n:38,cat:'ベージュ',name:'ベージュブラウン',level:'6',mix:'Y5+N5+N7',ratio:'1:1:1',star:'',desc:'ブラウン寄り安定',pc:'ALL',season:'通年'},
+{n:39,cat:'ベージュ',name:'マイルドベージュ',level:'7',mix:'Y7+N5+N7',ratio:'1:1:1',star:'',desc:'穏やかベージュ',pc:'ALL',season:'春秋'},
+{n:40,cat:'ベージュ',name:'カシスベージュ',level:'7',mix:'Y7+R7+N7',ratio:'1:1:2',star:'',desc:'カシス赤み添え',pc:'ブルベ',season:'秋'},
+{n:41,cat:'ベージュ',name:'フレンチベージュ',level:'8',mix:'Y7+N9+B',ratio:'2:2:0.2',star:'★',desc:'くすみ洗練',pc:'ブルベ夏',season:'春夏'},
+{n:42,cat:'ベージュ',name:'プラチナベージュ',level:'10',mix:'Y9+L+B',ratio:'1:1:0.3',star:'',desc:'白っぽいハイトーン',pc:'ブルベ夏',season:'夏'},
+{n:43,cat:'ミルクティーベージュ',name:'ダークミルクティー',level:'6',mix:'Y5+N7+R7',ratio:'1:2:0.3',star:'',desc:'暗めミルクティー',pc:'ALL',season:'秋冬'},
+{n:44,cat:'ミルクティーベージュ',name:'ミルクティーベージュ',level:'7',mix:'Y7+N7+R7',ratio:'2:1:0.5',star:'★★★',desc:'No.1トレンド色',pc:'ALL',season:'通年'},
+{n:45,cat:'ミルクティーベージュ',name:'ロイヤルミルクティー',level:'7',mix:'Y7+R7+N5',ratio:'2:0.5:1',star:'★',desc:'濃厚ミルクティー',pc:'イエベ秋',season:'秋冬'},
+{n:46,cat:'ミルクティーベージュ',name:'ミルクティーブラウン',level:'7',mix:'Y7+N7+R5',ratio:'2:2:0.5',star:'',desc:'ブラウン寄り',pc:'ALL',season:'通年'},
+{n:47,cat:'ミルクティーベージュ',name:'ミルクティーアッシュ',level:'8',mix:'Y7+N9+B',ratio:'2:1:0.3',star:'★★',desc:'くすみミルクティー',pc:'ブルベ夏',season:'春夏'},
+{n:48,cat:'ミルクティーベージュ',name:'ライトミルクティー',level:'9',mix:'Y9+N9+R9',ratio:'2:1:0.3',star:'★',desc:'淡いミルクティー',pc:'イエベ春',season:'春夏'},
+{n:49,cat:'ミルクティーベージュ',name:'チャイブラウン',level:'6',mix:'Y5+R5+N7',ratio:'1:0.5:2',star:'',desc:'スパイスチャイ',pc:'イエベ秋',season:'秋冬'},
+{n:50,cat:'ミルクティーベージュ',name:'ミルクティーグレージュ',level:'8',mix:'Y7+N9+B',ratio:'2:2:0.5',star:'★★',desc:'グレージュ寄り',pc:'ブルベ夏',season:'通年'},
+{n:51,cat:'ミルクティーベージュ',name:'ホワイトミルクティー',level:'10',mix:'Y9+L+N9',ratio:'1:1:0.5',star:'',desc:'超ハイトーン',pc:'ブルベ夏',season:'夏'},
+{n:52,cat:'ミルクティーベージュ',name:'ほうじ茶ミルクティー',level:'7',mix:'Y7+R5+N7',ratio:'2:0.5:1',star:'',desc:'茶色み強い',pc:'イエベ秋',season:'秋'},
+{n:53,cat:'ミルクティーベージュ',name:'ピンクミルクティー',level:'8',mix:'Y7+R7+N9',ratio:'1:1:1',star:'★',desc:'ピンク香る',pc:'ブルベ夏',season:'春'},
+{n:54,cat:'ミルクティーベージュ',name:'アールグレイ',level:'7',mix:'Y7+N7+B',ratio:'2:2:0.3',star:'★',desc:'青み上品',pc:'ブルベ夏',season:'通年'},
+{n:55,cat:'サンドベージュ',name:'ダークサンド',level:'5',mix:'Y5+N5+B',ratio:'1:2:0.2',star:'',desc:'暗めくすみサンド',pc:'ブルベ',season:'秋冬'},
+{n:56,cat:'サンドベージュ',name:'サンドベージュ',level:'6',mix:'Y5+N7+B',ratio:'1:2:0.3',star:'★★',desc:'マットで垢抜け',pc:'ALL',season:'通年'},
+{n:57,cat:'サンドベージュ',name:'サンドブラウン',level:'7',mix:'Y7+N7+B',ratio:'1:2:0.2',star:'★',desc:'砂色ブラウン',pc:'ALL',season:'秋'},
+{n:58,cat:'サンドベージュ',name:'デザートサンド',level:'8',mix:'Y7+N9+B',ratio:'1:1:0.3',star:'',desc:'明るめサンド',pc:'イエベ',season:'夏'},
+{n:59,cat:'サンドベージュ',name:'サンドグレージュ',level:'7',mix:'N7+Y7+B',ratio:'2:1:0.5',star:'★',desc:'グレーがかった',pc:'ブルベ夏',season:'春秋'},
+{n:60,cat:'サンドベージュ',name:'ウェットサンド',level:'6',mix:'Y5+N5+R5+B',ratio:'1:2:0.3:0.2',star:'',desc:'濡れた砂',pc:'イエベ秋',season:'秋'},
+{n:61,cat:'サンドベージュ',name:'ライトサンド',level:'9',mix:'Y9+N9+B',ratio:'1:1:0.3',star:'',desc:'明るいサンド',pc:'イエベ春',season:'夏'},
+{n:62,cat:'サンドベージュ',name:'カーキサンド',level:'7',mix:'Y7+N7+B',ratio:'1:1:0.5',star:'★',desc:'カーキおしゃれ',pc:'イエベ秋',season:'秋'},
+{n:63,cat:'サンドベージュ',name:'アッシュサンド',level:'8',mix:'N7+Y9+B',ratio:'1:1:0.4',star:'',desc:'アッシュ混じり',pc:'ブルベ',season:'春夏'},
+{n:64,cat:'サンドベージュ',name:'ダスティサンド',level:'6',mix:'N5+Y7+B',ratio:'2:1:0.3',star:'',desc:'くすみ強いサンド',pc:'ブルベ冬',season:'冬'},
+{n:65,cat:'グレージュ',name:'ダークグレージュ',level:'5',mix:'N5+B',ratio:'4:0.5',star:'',desc:'暗いグレージュ',pc:'ブルベ冬',season:'秋冬'},
+{n:66,cat:'グレージュ',name:'ナチュラルグレージュ',level:'6',mix:'N5+N7+B',ratio:'1:1:0.3',star:'★',desc:'自然なグレージュ',pc:'ALL',season:'通年'},
+{n:67,cat:'グレージュ',name:'グレージュブラウン',level:'7',mix:'N7+B',ratio:'4:0.5',star:'★★',desc:'定番グレージュ透明感◎',pc:'ALL',season:'通年'},
+{n:68,cat:'グレージュ',name:'シルバーグレージュ',level:'8',mix:'N7+N9+B',ratio:'1:1:0.5',star:'',desc:'シルバー寄り',pc:'ブルベ冬',season:'冬'},
+{n:69,cat:'グレージュ',name:'ラベンダーグレージュ',level:'7',mix:'N7+R7+B',ratio:'3:0.5:0.5',star:'★★★',desc:'超人気！ツヤ+透明感',pc:'ブルベ夏',season:'通年'},
+{n:70,cat:'グレージュ',name:'ピンクグレージュ',level:'7',mix:'N7+R7+B',ratio:'2:1:0.3',star:'★★',desc:'暖かみグレージュ',pc:'ブルベ夏',season:'春'},
+{n:71,cat:'グレージュ',name:'オリーブグレージュ',level:'7',mix:'N7+Y7+B',ratio:'2:1:0.5',star:'★★',desc:'赤み消し最強',pc:'イエベ秋',season:'通年'},
+{n:72,cat:'グレージュ',name:'モカグレージュ',level:'6',mix:'N5+R7+B',ratio:'2:0.5:0.3',star:'★',desc:'深みモカ',pc:'ブルベ冬',season:'秋冬'},
+{n:73,cat:'グレージュ',name:'ベージュグレージュ',level:'8',mix:'N9+Y7+B',ratio:'1:1:0.3',star:'★',desc:'明るめベージュ寄り',pc:'ALL',season:'春夏'},
+{n:74,cat:'グレージュ',name:'アッシュグレージュ',level:'7',mix:'N7+B',ratio:'3:1',star:'',desc:'青み強め',pc:'ブルベ冬',season:'冬'},
+{n:75,cat:'グレージュ',name:'ライトグレージュ',level:'9',mix:'N9+B',ratio:'4:0.5',star:'',desc:'明るいグレージュ',pc:'ブルベ夏',season:'春夏'},
+{n:76,cat:'グレージュ',name:'チャコールグレージュ',level:'5',mix:'N5+N3+B',ratio:'1:1:0.5',star:'',desc:'暗めチャコール',pc:'ブルベ冬',season:'冬'},
+{n:77,cat:'グレージュ',name:'パールグレージュ',level:'9',mix:'N9+B+Y9',ratio:'2:0.5:0.5',star:'',desc:'パール艶',pc:'ブルベ夏',season:'春'},
+{n:78,cat:'グレージュ',name:'スモーキーグレージュ',level:'6',mix:'N5+N7+B',ratio:'1:1:0.5',star:'★',desc:'スモーキー大人',pc:'ブルベ',season:'秋冬'},
+{n:79,cat:'アッシュ',name:'ダークアッシュ',level:'4',mix:'N3+B',ratio:'4:0.5',star:'',desc:'暗い青みブラウン',pc:'ブルベ冬',season:'冬'},
+{n:80,cat:'アッシュ',name:'アッシュブラウン',level:'5',mix:'N5+B',ratio:'3:0.5',star:'★',desc:'赤み抑え定番',pc:'ALL',season:'通年'},
+{n:81,cat:'アッシュ',name:'アッシュベージュ',level:'7',mix:'N7+Y7+B',ratio:'1:1:0.5',star:'★★',desc:'柔らかアッシュベージュ',pc:'ALL',season:'通年'},
+{n:82,cat:'アッシュ',name:'ブルーアッシュ',level:'6',mix:'N5+N7+B',ratio:'1:1:0.8',star:'',desc:'青みクール',pc:'ブルベ冬',season:'冬'},
+{n:83,cat:'アッシュ',name:'スモーキーアッシュ',level:'7',mix:'N7+B',ratio:'3:0.8',star:'',desc:'スモーキー',pc:'ブルベ',season:'秋冬'},
+{n:84,cat:'アッシュ',name:'アッシュグレー',level:'8',mix:'N7+N9+B',ratio:'1:1:0.8',star:'',desc:'グレー近い',pc:'ブルベ冬',season:'冬'},
+{n:85,cat:'アッシュ',name:'ライトアッシュ',level:'9',mix:'N9+B',ratio:'3:0.5',star:'',desc:'明るいアッシュ',pc:'ブルベ夏',season:'春夏'},
+{n:86,cat:'アッシュ',name:'アッシュレッド',level:'7',mix:'N7+R7+B',ratio:'1:1:0.3',star:'★',desc:'赤みクール',pc:'ブルベ冬',season:'秋'},
+{n:87,cat:'アッシュ',name:'アッシュピンク',level:'8',mix:'N9+R7+B',ratio:'1:1:0.3',star:'★',desc:'可愛いピンク',pc:'ブルベ夏',season:'春'},
+{n:88,cat:'アッシュ',name:'プラチナアッシュ',level:'10',mix:'N9+B+L',ratio:'1:0.5:1',star:'',desc:'ハイトーン',pc:'ブルベ冬',season:'夏'},
+{n:89,cat:'アッシュ',name:'カーキアッシュ',level:'7',mix:'N7+Y7+B',ratio:'1:0.5:0.8',star:'★',desc:'カーキマット',pc:'イエベ秋',season:'秋'},
+{n:90,cat:'アッシュ',name:'ブルージュ',level:'7',mix:'N7+B',ratio:'2:1',star:'★',desc:'青み透明感',pc:'ブルベ冬',season:'冬'},
+{n:91,cat:'アッシュ',name:'スチールアッシュ',level:'6',mix:'N5+B',ratio:'2:1',star:'',desc:'鉄のようなクール',pc:'ブルベ冬',season:'冬'},
+{n:92,cat:'オリーブ/マット',name:'ダークオリーブ',level:'5',mix:'Y5+B',ratio:'2:0.5',star:'',desc:'暗めオリーブ',pc:'イエベ秋',season:'秋冬'},
+{n:93,cat:'オリーブ/マット',name:'オリーブブラウン',level:'6',mix:'Y5+N7+B',ratio:'1:2:0.3',star:'★',desc:'自然なオリーブ',pc:'イエベ秋',season:'秋'},
+{n:94,cat:'オリーブ/マット',name:'オリーブベージュ',level:'7',mix:'Y7+N7+B',ratio:'2:1:0.3',star:'★★★',desc:'大人気！赤み消し',pc:'ALL',season:'通年'},
+{n:95,cat:'オリーブ/マット',name:'オリーブグリーン',level:'7',mix:'Y7+B',ratio:'2:0.8',star:'',desc:'グリーン強め',pc:'イエベ秋',season:'秋'},
+{n:96,cat:'オリーブ/マット',name:'カーキベージュ',level:'7',mix:'Y7+N7+B',ratio:'1:1:0.5',star:'★★',desc:'こなれカーキ',pc:'イエベ秋',season:'秋'},
+{n:97,cat:'オリーブ/マット',name:'マットブラウン',level:'6',mix:'Y5+Y7+B',ratio:'1:1:0.3',star:'',desc:'マット質感',pc:'イエベ秋',season:'秋冬'},
+{n:98,cat:'オリーブ/マット',name:'マットベージュ',level:'8',mix:'Y7+Y9+B',ratio:'1:1:0.3',star:'★',desc:'明るめマット',pc:'イエベ',season:'春夏'},
+{n:99,cat:'オリーブ/マット',name:'ライトオリーブ',level:'9',mix:'Y9+B',ratio:'3:0.5',star:'',desc:'明るめオリーブ',pc:'イエベ春',season:'春夏'},
+{n:100,cat:'オリーブ/マット',name:'オリーブアッシュ',level:'7',mix:'Y7+N7+B',ratio:'1:1:0.8',star:'★',desc:'アッシュ感',pc:'ALL',season:'通年'},
+{n:101,cat:'オリーブ/マット',name:'モスグリーン',level:'6',mix:'Y5+B',ratio:'2:1',star:'',desc:'深い苔色',pc:'イエベ秋',season:'秋'},
+{n:102,cat:'オリーブ/マット',name:'セージグリーン',level:'8',mix:'Y7+N9+B',ratio:'1:1:0.5',star:'',desc:'ハーブ柔らか',pc:'イエベ秋',season:'春'},
+{n:103,cat:'オリーブ/マット',name:'オリーブグレージュ',level:'7',mix:'N7+Y7+B',ratio:'2:1:0.5',star:'★★',desc:'最強コンビ',pc:'ALL',season:'通年'},
+{n:104,cat:'オリーブ/マット',name:'アースオリーブ',level:'6',mix:'Y5+N5+B',ratio:'1:1:0.5',star:'',desc:'アースカラー',pc:'イエベ秋',season:'秋'},
+{n:105,cat:'ラベンダー',name:'ダークラベンダー',level:'5',mix:'N5+R5+B',ratio:'2:0.5:0.5',star:'',desc:'暗めラベンダー',pc:'ブルベ冬',season:'冬'},
+{n:106,cat:'ラベンダー',name:'ラベンダーブラウン',level:'6',mix:'N5+R7+B',ratio:'2:0.5:0.3',star:'★',desc:'上品ラベンダー',pc:'ブルベ',season:'秋冬'},
+{n:107,cat:'ラベンダー',name:'ラベンダーアッシュ',level:'7',mix:'N7+R7+B',ratio:'2:0.5:0.5',star:'★★★',desc:'No.3ツヤ最強',pc:'ブルベ夏',season:'通年'},
+{n:108,cat:'ラベンダー',name:'ラベンダーベージュ',level:'8',mix:'N9+R7+B+Y7',ratio:'2:0.5:0.3:0.5',star:'★★',desc:'ベージュ寄り',pc:'ブルベ夏',season:'春'},
+{n:109,cat:'ラベンダー',name:'ラベンダーグレージュ',level:'7',mix:'N7+R7+B',ratio:'3:0.5:0.5',star:'★★★',desc:'超人気ラベンダーグレージュ',pc:'ブルベ夏',season:'通年'},
+{n:110,cat:'ラベンダー',name:'パープルアッシュ',level:'7',mix:'N7+R7+B',ratio:'1:1:0.8',star:'',desc:'紫感強い',pc:'ブルベ冬',season:'秋冬'},
+{n:111,cat:'ラベンダー',name:'ライラック',level:'8',mix:'N9+R7+B',ratio:'1:1:0.5',star:'',desc:'花色',pc:'ブルベ夏',season:'春'},
+{n:112,cat:'ラベンダー',name:'バイオレットブラウン',level:'6',mix:'N5+R5+B',ratio:'1:1:0.5',star:'',desc:'紫ブラウン',pc:'ブルベ冬',season:'秋冬'},
+{n:113,cat:'ラベンダー',name:'パステルラベンダー',level:'10',mix:'N9+R9+B+L',ratio:'1:0.5:0.5:1',star:'',desc:'パステル',pc:'ブルベ夏',season:'春'},
+{n:114,cat:'ラベンダー',name:'スモーキーラベンダー',level:'6',mix:'N5+N7+R7+B',ratio:'1:1:0.5:0.5',star:'★',desc:'スモーキー',pc:'ブルベ',season:'秋冬'},
+{n:115,cat:'ラベンダー',name:'ラベンダーピンク',level:'7',mix:'R7+N7+B',ratio:'1:1:0.3',star:'★',desc:'ピンク寄り',pc:'ブルベ夏',season:'春'},
+{n:116,cat:'ラベンダー',name:'モーヴ',level:'6',mix:'R5+N7+B',ratio:'1:2:0.5',star:'★',desc:'大人モーヴ',pc:'ブルベ冬',season:'秋冬'},
+{n:117,cat:'ピンクベージュ',name:'ダークピンクブラウン',level:'5',mix:'R5+N5',ratio:'1:2',star:'',desc:'暗めピンク',pc:'ブルベ',season:'秋冬'},
+{n:118,cat:'ピンクベージュ',name:'ピンクブラウン',level:'6',mix:'R5+N7',ratio:'1:2',star:'★',desc:'自然ピンクブラウン',pc:'ブルベ夏',season:'通年'},
+{n:119,cat:'ピンクベージュ',name:'ピンクベージュ',level:'7',mix:'R7+Y7+N7',ratio:'1:1:1',star:'★★',desc:'人気ピンクベージュ',pc:'ブルベ夏',season:'春'},
+{n:120,cat:'ピンクベージュ',name:'コーラルピンク',level:'7',mix:'R7+Y7',ratio:'1:1',star:'★★',desc:'イエベ◎',pc:'イエベ春',season:'春夏'},
+{n:121,cat:'ピンクベージュ',name:'ダスティピンク',level:'7',mix:'R7+N7+B',ratio:'1:2:0.2',star:'★★',desc:'くすみピンク',pc:'ブルベ夏',season:'春秋'},
+{n:122,cat:'ピンクベージュ',name:'サーモンピンク',level:'8',mix:'R7+Y7+N9',ratio:'1:1:1',star:'',desc:'温かいサーモン',pc:'イエベ春',season:'春'},
+{n:123,cat:'ピンクベージュ',name:'ベビーピンク',level:'9',mix:'R9+Y9+N9',ratio:'1:0.5:1',star:'',desc:'淡いベビー',pc:'ブルベ夏',season:'春'},
+{n:124,cat:'ピンクベージュ',name:'ピーチベージュ',level:'8',mix:'R7+Y9+N9',ratio:'1:1:1',star:'★',desc:'桃ベージュ',pc:'イエベ春',season:'春夏'},
+{n:125,cat:'ピンクベージュ',name:'ヌーディピンク',level:'8',mix:'R7+N9+Y7',ratio:'0.5:2:1',star:'',desc:'控えめヌーディ',pc:'ALL',season:'通年'},
+{n:126,cat:'ピンクベージュ',name:'チェリーブロッサム',level:'7',mix:'R7+R5+N7',ratio:'1:0.5:1',star:'★',desc:'桜カラー',pc:'ブルベ夏',season:'春'},
+{n:127,cat:'ピンクベージュ',name:'ストロベリーベージュ',level:'8',mix:'R7+Y7+N9',ratio:'2:1:1',star:'',desc:'いちごミルク',pc:'ブルベ夏',season:'春'},
+{n:128,cat:'ピンクベージュ',name:'ローズクォーツ',level:'9',mix:'R9+N9+B',ratio:'1:1:0.2',star:'★',desc:'宝石ピンク',pc:'ブルベ夏',season:'春'},
+{n:129,cat:'ピンクベージュ',name:'フラミンゴピンク',level:'9',mix:'R9+Y9',ratio:'2:1',star:'',desc:'鮮やかフラミンゴ',pc:'ブルベ夏',season:'夏'},
+{n:130,cat:'ピンクベージュ',name:'ミスティローズ',level:'7',mix:'R7+N7+B+Y7',ratio:'1:2:0.2:0.5',star:'',desc:'霧のローズ',pc:'ブルベ夏',season:'春秋'},
+{n:131,cat:'ローズブラウン',name:'ダークローズ',level:'5',mix:'R5+N5',ratio:'1:1',star:'',desc:'深いローズ',pc:'ブルベ冬',season:'秋冬'},
+{n:132,cat:'ローズブラウン',name:'ローズブラウン',level:'6',mix:'R5+N7',ratio:'1:1',star:'★★',desc:'定番色持ち◎',pc:'ブルベ',season:'通年'},
+{n:133,cat:'ローズブラウン',name:'ウォームローズ',level:'7',mix:'R7+N7',ratio:'1:1',star:'★',desc:'温かみローズ',pc:'ブルベ夏',season:'春秋'},
+{n:134,cat:'ローズブラウン',name:'アンティークローズ',level:'6',mix:'R5+Y7+N5',ratio:'1:0.5:1',star:'★★',desc:'くすみアンティーク',pc:'ブルベ',season:'秋冬'},
+{n:135,cat:'ローズブラウン',name:'ローズベージュ',level:'8',mix:'R7+Y7+N9',ratio:'1:0.5:1',star:'★',desc:'ベージュ寄り',pc:'ALL',season:'春'},
+{n:136,cat:'ローズブラウン',name:'ディープローズ',level:'5',mix:'R5+N3',ratio:'1:1',star:'',desc:'深いバラ色',pc:'ブルベ冬',season:'冬'},
+{n:137,cat:'ローズブラウン',name:'ローズウッド',level:'6',mix:'R5+R7+N5',ratio:'1:1:1',star:'',desc:'木材色',pc:'ブルベ冬',season:'秋冬'},
+{n:138,cat:'ローズブラウン',name:'ダスティローズ',level:'7',mix:'R7+N7+B',ratio:'1:1:0.3',star:'★★',desc:'くすみトレンド',pc:'ブルベ夏',season:'秋'},
+{n:139,cat:'ローズブラウン',name:'ライトローズ',level:'9',mix:'R9+N9',ratio:'1:1',star:'',desc:'明るめローズ',pc:'ブルベ夏',season:'春夏'},
+{n:140,cat:'ローズブラウン',name:'ワインローズ',level:'5',mix:'R5+B+N5',ratio:'1:0.3:1',star:'',desc:'ワインの深み',pc:'ブルベ冬',season:'秋冬'},
+{n:141,cat:'ローズブラウン',name:'モーヴローズ',level:'7',mix:'R7+N7+B',ratio:'1:2:0.5',star:'★',desc:'青みモーヴ',pc:'ブルベ',season:'秋'},
+{n:142,cat:'ローズブラウン',name:'ロゼシャンパン',level:'9',mix:'R9+Y9+N9',ratio:'1:0.5:1',star:'',desc:'シャンパン',pc:'ブルベ夏',season:'春夏'},
+{n:143,cat:'レッド/チェリー',name:'ダークレッド',level:'4',mix:'R5+N3',ratio:'1:1',star:'',desc:'深い赤',pc:'ブルベ冬',season:'秋冬'},
+{n:144,cat:'レッド/チェリー',name:'レッドブラウン',level:'5',mix:'R5',ratio:'—',star:'★',desc:'赤みブラウン',pc:'ブルベ',season:'秋冬'},
+{n:145,cat:'レッド/チェリー',name:'チェリーブラウン',level:'6',mix:'R5+R7',ratio:'1:1',star:'★★',desc:'トレンドチェリー',pc:'ブルベ冬',season:'秋冬'},
+{n:146,cat:'レッド/チェリー',name:'チェリーレッド',level:'7',mix:'R7',ratio:'—',star:'★',desc:'鮮やかチェリー',pc:'ブルベ冬',season:'秋'},
+{n:147,cat:'レッド/チェリー',name:'ボルドー',level:'5',mix:'R5+B',ratio:'3:0.5',star:'★★',desc:'深みボルドー色気◎',pc:'ブルベ冬',season:'秋冬'},
+{n:148,cat:'レッド/チェリー',name:'バーガンディ',level:'5',mix:'R5+N5+B',ratio:'2:1:0.5',star:'★',desc:'紫がかった赤',pc:'ブルベ冬',season:'冬'},
+{n:149,cat:'レッド/チェリー',name:'ガーネット',level:'6',mix:'R5+R7+B',ratio:'1:1:0.3',star:'',desc:'宝石色',pc:'ブルベ冬',season:'秋冬'},
+{n:150,cat:'レッド/チェリー',name:'カシスレッド',level:'6',mix:'R5+R7+B',ratio:'1:1:0.5',star:'',desc:'カシス赤紫',pc:'ブルベ冬',season:'秋'},
+{n:151,cat:'レッド/チェリー',name:'ストロベリーレッド',level:'7',mix:'R7+Y7',ratio:'2:1',star:'',desc:'いちご赤',pc:'イエベ春',season:'春'},
+{n:152,cat:'レッド/チェリー',name:'レッドバイオレット',level:'6',mix:'R5+B',ratio:'2:1',star:'',desc:'紫み赤',pc:'ブルベ冬',season:'冬'},
+{n:153,cat:'レッド/チェリー',name:'ブライトレッド',level:'8',mix:'R7+R9',ratio:'1:1',star:'',desc:'明るめ赤',pc:'ブルベ冬',season:'秋'},
+{n:154,cat:'レッド/チェリー',name:'アッシュレッド',level:'7',mix:'R7+N7+B',ratio:'2:1:0.3',star:'★★',desc:'くすみレッド！',pc:'ALL',season:'秋'},
+{n:155,cat:'レッド/チェリー',name:'ルビーレッド',level:'7',mix:'R7+R5+B',ratio:'2:1:0.3',star:'',desc:'ルビー深い赤',pc:'ブルベ冬',season:'秋冬'},
+{n:156,cat:'オレンジ/テラコッタ',name:'ダークテラコッタ',level:'5',mix:'R5+Y5',ratio:'1:1',star:'',desc:'深いテラコッタ',pc:'イエベ秋',season:'秋'},
+{n:157,cat:'オレンジ/テラコッタ',name:'テラコッタブラウン',level:'6',mix:'R5+Y7',ratio:'1:1',star:'★★',desc:'人気テラコッタ',pc:'イエベ秋',season:'秋'},
+{n:158,cat:'オレンジ/テラコッタ',name:'オレンジブラウン',level:'7',mix:'R7+Y7',ratio:'1:2',star:'★★',desc:'トレンド暖色',pc:'イエベ',season:'通年'},
+{n:159,cat:'オレンジ/テラコッタ',name:'コッパーオレンジ',level:'7',mix:'R7+Y7',ratio:'1:1',star:'★',desc:'銅の温かみ',pc:'イエベ秋',season:'秋'},
+{n:160,cat:'オレンジ/テラコッタ',name:'アプリコットオレンジ',level:'8',mix:'Y7+R7+Y9',ratio:'1:1:1',star:'',desc:'杏子オレンジ',pc:'イエベ春',season:'春夏'},
+{n:161,cat:'オレンジ/テラコッタ',name:'ジンジャーブラウン',level:'6',mix:'Y5+R5+N7',ratio:'1:1:1',star:'',desc:'スパイシー生姜',pc:'イエベ秋',season:'秋冬'},
+{n:162,cat:'オレンジ/テラコッタ',name:'マリーゴールド',level:'8',mix:'Y7+R7',ratio:'2:1',star:'',desc:'花ゴールド',pc:'イエベ春',season:'夏'},
+{n:163,cat:'オレンジ/テラコッタ',name:'バーントオレンジ',level:'6',mix:'R5+Y5+N5',ratio:'1:1:0.5',star:'★',desc:'焦がしオレンジ',pc:'イエベ秋',season:'秋'},
+{n:164,cat:'オレンジ/テラコッタ',name:'オレンジベージュ',level:'8',mix:'Y7+R7+N9',ratio:'2:1:1',star:'★',desc:'柔らかオレンジ',pc:'イエベ春',season:'春'},
+{n:165,cat:'オレンジ/テラコッタ',name:'サンセットオレンジ',level:'9',mix:'Y9+R9',ratio:'2:1',star:'',desc:'夕焼けオレンジ',pc:'イエベ春',season:'夏'},
+{n:166,cat:'オレンジ/テラコッタ',name:'テラコッタベージュ',level:'7',mix:'R7+Y7+N7',ratio:'1:1:1',star:'★',desc:'ベージュ寄り',pc:'イエベ',season:'秋'},
+{n:167,cat:'オレンジ/テラコッタ',name:'パンプキンオレンジ',level:'7',mix:'Y7+R5',ratio:'2:1',star:'',desc:'かぼちゃ',pc:'イエベ秋',season:'秋'},
+{n:168,cat:'オレンジ/テラコッタ',name:'アンバーブラウン',level:'6',mix:'Y5+R5+N5',ratio:'1:1:1',star:'',desc:'琥珀温かみ',pc:'イエベ秋',season:'秋冬'},
+{n:169,cat:'ブルーブラック',name:'ブルーブラック',level:'3',mix:'N3+B',ratio:'3:0.5',star:'★★',desc:'透明感暗髪',pc:'ブルベ冬',season:'通年'},
+{n:170,cat:'ブルーブラック',name:'ネイビーブラック',level:'3',mix:'N3+B',ratio:'2:1',star:'★',desc:'紺色黒髪',pc:'ブルベ冬',season:'冬'},
+{n:171,cat:'ブルーブラック',name:'チャコールブラック',level:'4',mix:'N3+N5+B',ratio:'2:1:0.5',star:'',desc:'チャコール暗髪',pc:'ブルベ冬',season:'冬'},
+{n:172,cat:'ブルーブラック',name:'インディゴブラック',level:'3',mix:'N3+B',ratio:'2:0.8',star:'',desc:'藍色',pc:'ブルベ冬',season:'通年'},
+{n:173,cat:'ブルーブラック',name:'ダークネイビー',level:'4',mix:'N3+N5+B',ratio:'1:1:0.8',star:'',desc:'暗めネイビー',pc:'ブルベ冬',season:'秋冬'},
+{n:174,cat:'ブルーブラック',name:'ミッドナイトブルー',level:'4',mix:'N3+B',ratio:'1:0.8',star:'',desc:'深夜の空',pc:'ブルベ冬',season:'冬'},
+{n:175,cat:'ブルーブラック',name:'ブルーアッシュブラック',level:'4',mix:'N3+N5+B',ratio:'2:1:0.5',star:'★',desc:'アッシュブルーブラック',pc:'ブルベ',season:'通年'},
+{n:176,cat:'ブルーブラック',name:'スレートブラック',level:'5',mix:'N5+B',ratio:'2:0.8',star:'',desc:'青灰色',pc:'ブルベ冬',season:'秋冬'},
+{n:177,cat:'ブルーブラック',name:'オニキスブラック',level:'3',mix:'N3+R5+B',ratio:'3:0.3:0.3',star:'',desc:'艶黒',pc:'ブルベ冬',season:'通年'},
+{n:178,cat:'ブルーブラック',name:'ダークバイオレット暗髪',level:'4',mix:'N3+R5+B',ratio:'2:0.5:0.5',star:'',desc:'紫がかった暗髪',pc:'ブルベ冬',season:'冬'},
+{n:179,cat:'ハイトーン特殊',name:'プラチナブロンド',level:'10',mix:'Y9+L',ratio:'1:2',star:'',desc:'白金ブロンド',pc:'ブルベ',season:'夏'},
+{n:180,cat:'ハイトーン特殊',name:'シャンパンゴールド',level:'10',mix:'Y9+L+N9',ratio:'1:1:0.5',star:'★',desc:'シャンパン輝き',pc:'イエベ春',season:'春夏'},
+{n:181,cat:'ハイトーン特殊',name:'ホワイトベージュ',level:'10',mix:'Y9+L+B',ratio:'1:2:0.3',star:'',desc:'白に近い',pc:'ブルベ夏',season:'夏'},
+{n:182,cat:'ハイトーン特殊',name:'アイスラベンダー',level:'10',mix:'N9+R9+B+L',ratio:'1:0.5:0.5:1',star:'',desc:'氷ラベンダー',pc:'ブルベ夏',season:'夏'},
+{n:183,cat:'ハイトーン特殊',name:'ペールピンク',level:'10',mix:'R9+L+N9',ratio:'1:1:0.5',star:'',desc:'淡いピンク',pc:'ブルベ夏',season:'春'},
+{n:184,cat:'ハイトーン特殊',name:'ミルキーベージュ',level:'10',mix:'Y9+L+R9',ratio:'1:1:0.3',star:'★',desc:'牛乳ベージュ',pc:'ALL',season:'春夏'},
+{n:185,cat:'ハイトーン特殊',name:'ハイトーンアッシュ',level:'10',mix:'N9+L+B',ratio:'1:1:0.5',star:'',desc:'超明るいアッシュ',pc:'ブルベ',season:'夏'},
+{n:186,cat:'ハイトーン特殊',name:'ハイトーンオリーブ',level:'10',mix:'Y9+L+B',ratio:'1:1:0.5',star:'',desc:'明るいオリーブ',pc:'イエベ',season:'夏'},
+{n:187,cat:'ハイトーン特殊',name:'シルバーブロンド',level:'10',mix:'N9+L+B',ratio:'1:2:0.5',star:'',desc:'シルバーブロンド',pc:'ブルベ冬',season:'夏'},
+{n:188,cat:'ハイトーン特殊',name:'ハニーブロンド',level:'10',mix:'Y9+R9+L',ratio:'1:0.3:1',star:'★',desc:'はちみつブロンド',pc:'イエベ春',season:'春夏'},
+{n:189,cat:'ハイトーン特殊',name:'クリームソーダ',level:'10',mix:'Y9+L+B',ratio:'1:1:0.2',star:'',desc:'メロンソーダ',pc:'イエベ春',season:'夏'},
+{n:190,cat:'ハイトーン特殊',name:'コットンキャンディ',level:'10',mix:'R9+L+B',ratio:'1:1:0.2',star:'',desc:'わたあめ',pc:'ブルベ夏',season:'春夏'},
+{n:191,cat:'グレーカラー',name:'GCダーク(白髪30%)',level:'6',mix:'5+7',ratio:'1:2',star:'★',desc:'白髪少なめ6Lv',pc:'ALL',season:'通年'},
+{n:192,cat:'グレーカラー',name:'GCダーク(白髪50%)',level:'6',mix:'5+7',ratio:'1:1',star:'★',desc:'白髪半分6Lv',pc:'ALL',season:'通年'},
+{n:193,cat:'グレーカラー',name:'GCダーク(白髪80%)',level:'6',mix:'5+7',ratio:'2:1',star:'',desc:'白髪多め6Lv',pc:'ALL',season:'通年'},
+{n:194,cat:'グレーカラー',name:'GCミディアム(白髪30%)',level:'7',mix:'5+7',ratio:'1:3',star:'',desc:'白髪少なめ7Lv',pc:'ALL',season:'通年'},
+{n:195,cat:'グレーカラー',name:'GCミディアム(白髪50%)',level:'7',mix:'5+7',ratio:'1:2',star:'★',desc:'白髪半分7Lv',pc:'ALL',season:'通年'},
+{n:196,cat:'グレーカラー',name:'GCミディアム(白髪80%)',level:'7',mix:'5+7',ratio:'2:1',star:'',desc:'白髪多め7Lv',pc:'ALL',season:'通年'},
+{n:197,cat:'グレーカラー',name:'GCライト(白髪30%)',level:'8',mix:'5+9',ratio:'1:4',star:'',desc:'白髪少なめ8Lv',pc:'ALL',season:'通年'},
+{n:198,cat:'グレーカラー',name:'GCライト(白髪50%)',level:'8',mix:'5+9',ratio:'1:3',star:'★',desc:'白髪半分8Lv',pc:'ALL',season:'通年'},
+{n:199,cat:'グレーカラー',name:'GCライト(白髪80%)',level:'8',mix:'5+9',ratio:'2.5:1',star:'',desc:'白髪多め8Lv',pc:'ALL',season:'通年'},
+{n:200,cat:'グレーカラー',name:'GCウォームブラウン(白髪50%)',level:'7',mix:'5+7 ベースR',ratio:'1:2',star:'★★',desc:'ローズ系白髪染め',pc:'ALL',season:'通年'},
+{n:201,cat:'グレーカラー',name:'GCイエローベージュ(白髪50%)',level:'7',mix:'5+7 ベースY',ratio:'1:2',star:'★',desc:'イエロー系',pc:'イエベ',season:'通年'},
+{n:202,cat:'グレーカラー',name:'GCアッシュグレー(白髪50%)',level:'7',mix:'5+7 +アクセントB',ratio:'1:2',star:'★★',desc:'くすみ白髪染め',pc:'ブルベ',season:'通年'},
+{n:203,cat:'グレーカラー',name:'GCオリーブ(白髪50%)',level:'7',mix:'5+7 ベースY+アクセントB',ratio:'1:2',star:'★',desc:'赤み消し',pc:'ALL',season:'通年'},
+{n:204,cat:'グレーカラー',name:'GCラベンダー(白髪80%)',level:'7',mix:'5+7 +アクセントR+B',ratio:'2:1',star:'★★',desc:'上品ラベンダー',pc:'ブルベ',season:'通年'},
+];
+
+R.forEach(r=>compute(r));
+const CATS=[...new Set(R.map(r=>r.cat))];
+const cf=document.getElementById('cf');
+CATS.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;cf.appendChild(o);});
+
+function getF(){
+  const cv=cf.value,lv=document.getElementById('lf').value,sv=document.getElementById('sf').value;
+  return R.filter(r=>{
+    if(cv&&r.cat!==cv)return false;if(lv&&r.level!==lv)return false;
+    if(sv==='3'&&r.star!=='★★★')return false;if(sv==='2'&&r.star.length<2)return false;if(sv==='1'&&!r.star)return false;
+    return true;
+  });
+}
+function renderList(){
+  const f=getF();let h='',lc='';
+  for(const r of f){
+    if(r.cat!==lc){h+=`<div class="cl">${r.cat}</div>`;lc=r.cat;}
+    h+=`<div class="cd" onclick="sD(${r.n})"><div class="sw" style="background:${r.hex}"></div><div class="ci"><div class="nm">${r.star?'<span class="stars">'+r.star+'</span> ':''}'${r.name}'</div><div class="mt">Lv.${r.level} ─ ${r.pc} ─ ${r.season}</div><div class="rc">${r.mix} (${r.ratio}) ${r.hex}</div></div></div>`;
+  }
+  document.getElementById('gE').innerHTML=h;
+}
+
+let curAx='lv-cat';
+function setAx(a){curAx=a;document.querySelectorAll('.ab').forEach(b=>b.classList.toggle('active',b.dataset.axis===a));renderMx();}
+function mxC(items){
+  if(!items.length)return'<td style="color:#ddd">—</td>';
+  let h='<td>';for(const it of items.slice(0,3))h+=`<div style="cursor:pointer;margin-bottom:1px" onclick="sD(${it.n})"><div class="csw" style="background:${it.hex}"></div><div class="cn">${it.name}</div></div>`;
+  if(items.length>3)h+=`<div class="cn" style="color:var(--rr)">+${items.length-3}</div>`;return h+'</td>';
+}
+function renderMx(){
+  const f=getF();
+  const LVS=['3','4','5','6','7','8','9','10'],CTS=[...new Set(f.map(r=>r.cat))];
+  const PCS=['ALL','イエベ','イエベ春','イエベ秋','ブルベ','ブルベ夏','ブルベ冬'];
+  const SNS=['通年','春','春夏','春秋','夏','秋','秋冬','冬'];
+  const STS=['★★★','★★','★',''],STL=['★★★','★★','★','なし'];
+  let rows,cols,rl,cll,gi;
+  switch(curAx){
+    case'lv-cat':rows=LVS;cols=CTS;rl=LVS.map(l=>'Lv'+l);cll=CTS;gi=(r,c)=>f.filter(x=>x.level.split('-')[0]===r&&x.cat===c);break;
+    case'pc-cat':rows=PCS;cols=CTS;rl=PCS;cll=CTS;gi=(r,c)=>f.filter(x=>x.pc===r&&x.cat===c);break;
+    case'pc-lv':rows=PCS;cols=LVS;rl=PCS;cll=LVS.map(l=>'Lv'+l);gi=(r,c)=>f.filter(x=>x.pc===r&&x.level.split('-')[0]===c);break;
+    case'season-cat':rows=SNS;cols=CTS;rl=SNS;cll=CTS;gi=(r,c)=>f.filter(x=>x.season===r&&x.cat===c);break;
+    case'season-lv':rows=SNS;cols=LVS;rl=SNS;cll=LVS.map(l=>'Lv'+l);gi=(r,c)=>f.filter(x=>x.season===r&&x.level.split('-')[0]===c);break;
+    case'star-cat':rows=STS;cols=CTS;rl=STL;cll=CTS;gi=(r,c)=>f.filter(x=>x.star===r&&x.cat===c);break;
+    default:rows=LVS;cols=CTS;rl=LVS.map(l=>'Lv'+l);cll=CTS;gi=(r,c)=>f.filter(x=>x.level.split('-')[0]===r&&x.cat===c);
+  }
+  let h='<div class="mw"><table class="mx"><colgroup><col style="width:55px">';
+  for(const c of cll)h+='<col>';
+  h+='</colgroup><tr><th></th>';
+  for(const c of cll)h+=`<th>${String(c).replace(/\//g,'/<wbr>')}</th>`;
+  h+='</tr>';
+  for(let i=0;i<rows.length;i++){h+=`<tr><td>${rl[i]}</td>`;for(const c of cols)h+=mxC(gi(rows[i],c));h+='</tr>';}
+  const total=f.length,filled=rows.reduce((s,r)=>s+cols.reduce((s2,c)=>s2+(gi(r,c).length>0?1:0),0),0);
+  h+=`</table></div><div style="text-align:right;font-size:10px;color:var(--rg);margin-top:4px">${total}色 ─ ${rows.length}×${cols.length}=${rows.length*cols.length}セル中${filled}にデータ</div>`;
+  document.getElementById('mE').innerHTML=h;
+}
+function render(){renderList();renderMx();}
+function sw(v){
+  document.querySelectorAll('.nb').forEach((t,i)=>t.classList.toggle('active',(v==='list'&&i===0)||(v==='matrix'&&i===1)||(v==='sim'&&i===2)||(v==='theory'&&i===3)));
+  ['listView','matrixView','simView','theoryView'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById(v==='list'?'listView':v==='matrix'?'matrixView':v==='sim'?'simView':'theoryView').style.display='';
+}
+function sD(n){
+  const r=R.find(x=>x.n===n);if(!r)return;
+  const tc=(r.rgb[0]*.299+r.rgb[1]*.587+r.rgb[2]*.114)>70?'#222':'#fff';
+  // Also compute at 0% and 100% for comparison
+  const c0=computeRaw(r.comps||parseR(r.mix,r.ratio),0);
+  const c100=computeRaw(r.comps||parseR(r.mix,r.ratio),100);
+  document.getElementById('mC').innerHTML=`<h3 style="font-family:var(--fd);font-size:17px">${r.star||''} ${r.name}</h3><p style="color:var(--rg);font-size:11px">${r.cat} ─ Lv.${r.level} ─ ${r.pc} ─ ${r.season}</p>
+  <div style="display:flex;justify-content:center;gap:8px;margin:12px 0"><div style="text-align:center"><div class="msw" style="background:${c0.hex};color:${(c0.rgb[0]*.299+c0.rgb[1]*.587+c0.rgb[2]*.114)>70?'#222':'#fff'}">${c0.hex}</div><div style="font-size:9px;color:var(--rg)">黒髪0%</div></div><div style="text-align:center"><div class="msw" style="background:${r.hex};color:${tc};border-color:var(--rr)">${r.hex}</div><div style="font-size:9px;color:var(--rr);font-weight:700">白髪${gw}%</div></div><div style="text-align:center"><div class="msw" style="background:${c100.hex};color:${(c100.rgb[0]*.299+c100.rgb[1]*.587+c100.rgb[2]*.114)>70?'#222':'#fff'}">${c100.hex}</div><div style="font-size:9px;color:var(--rg)">白髪100%</div></div></div>
+  <p style="font-size:12px"><strong>調合:</strong> ${r.mix} &nbsp; <strong>比率:</strong> ${r.ratio}</p><p style="color:var(--rg);font-size:11px;margin-top:3px">${r.desc}</p>
+  <div class="mcl"><strong>計算(白髪${gw}%):</strong><pre style="white-space:pre-wrap;color:#666;margin-top:4px;font-size:9px">${r.steps}</pre></div>
+  <button class="bsm" onclick="ldS(${r.n});cM()">シミュレーターで開く</button>`;
+  document.getElementById('modal').classList.add('show');
+}
+function cM(){document.getElementById('modal').classList.remove('show');}
+
+// === SIMULATOR ===
+let sSlots=[{code:'Y7',weight:2},{code:'N7',weight:1},{code:'R7',weight:0.5}];
+const DO=['N3','N5','N7','N9','Y5','Y7','Y9','R5','R7','R9','B','L'];
+function rS(){
+  let h='';sSlots.forEach((s,i)=>{
+    const rgb=drugRGB(s.code);
+    h+=`<div class="sr"><label>${i+1}.</label><select onchange="sSlots[${i}].code=this.value;rS();cS()" style="width:65px">${DO.map(c=>`<option${c===s.code?' selected':''}>${c}</option>`).join('')}</select><input type="range" min="0" max="40" value="${Math.round(s.weight*10)}" oninput="sSlots[${i}].weight=this.value/10;this.nextElementSibling.textContent=(this.value/10).toFixed(1);cS()"><span class="vl">${s.weight.toFixed(1)}</span><div class="ms" style="background:rgb(${rgb.map(v=>Math.round(v)).join(',')})"></div>${sSlots.length>1?`<span class="srm" onclick="sSlots.splice(${i},1);rS();cS()">✕</span>`:''}</div>`;
+  });document.getElementById('sSlots').innerHTML=h;
+}
+function addS(){if(sSlots.length<6){sSlots.push({code:'B',weight:0.3});rS();cS();}}
+function cS(){
+  const comps=sSlots.filter(s=>s.weight>0).map(s=>({code:s.code,weight:s.weight}));
+  const lv=document.getElementById('sLv').value;
+  const res=computeRaw(comps);
+  const r0=computeRaw(comps,0);
+  const r100=computeRaw(comps,100);
+  const tc=v=>((v[0]*.299+v[1]*.587+v[2]*.114)>70?'#222':'#fff');
+  
+  document.getElementById('sCmp').innerHTML=`
+    <div style="text-align:center"><div class="csw2" style="background:${r0.hex};color:${tc(r0.rgb)}">${r0.hex}</div><div class="clb">黒髪0%</div></div>
+    <div style="font-size:10px;color:var(--rg)">→</div>
+    <div style="text-align:center"><div class="csw2" style="background:${res.hex};color:${tc(res.rgb)};border:2px solid var(--rr)">${res.hex}</div><div class="clb" style="color:var(--rr);font-weight:700">白髪${gw}%</div></div>
+    <div style="font-size:10px;color:var(--rg)">→</div>
+    <div style="text-align:center"><div class="csw2" style="background:${r100.hex};color:${tc(r100.rgb)}">${r100.hex}</div><div class="clb">白髪100%</div></div>`;
+  
+  const el=document.getElementById('sSw');el.style.background=res.hex;el.style.color=tc(res.rgb);el.textContent=res.hex;
+  const formula=comps.map(c=>`${c.code}×${c.weight}`).join(' + ');
+  document.getElementById('sIn').innerHTML=`<strong>調合:</strong> ${formula}<br><strong>白髪率:</strong> ${gw}%<br><strong>RGB:</strong> <code>(${res.rgb.join(', ')})</code><br><strong>HEX:</strong> <code>${res.hex}</code><hr style="border-color:var(--rb);margin:5px 0"><pre style="white-space:pre-wrap;font-size:9px;color:var(--rg)">${res.steps}</pre>`;
+  const dists=R.map(r=>{const dr=r.rgb[0]-res.rgb[0],dg=r.rgb[1]-res.rgb[1],db=r.rgb[2]-res.rgb[2];return{r,d:Math.sqrt(dr*dr+dg*dg+db*db)}}).sort((a,b)=>a.d-b.d).slice(0,6);
+  let ch='';for(const d of dists)ch+=`<div class="sni" onclick="sD(${d.r.n})"><div class="nsw" style="background:${d.r.hex}"></div><div class="nlb">${d.r.name}</div></div>`;
+  document.getElementById('sNr').innerHTML=ch;
+}
+function ldS(n){
+  const r=R.find(x=>x.n===n);if(!r)return;
+  const comps=parseR(r.mix,r.ratio);sSlots=comps.map(c=>({...c}));
+  if(!sSlots.length)sSlots=[{code:'N7',weight:1}];
+  document.getElementById('sLv').value=Math.round(parseFloat(r.level)||7);
+  sw('sim');rS();cS();
+}
+const PRS=[
+  {name:'ミルクティーベージュ',s:[{code:'Y7',weight:2},{code:'N7',weight:1},{code:'R7',weight:0.5}],lv:'7'},
+  {name:'オリーブベージュ',s:[{code:'Y7',weight:2},{code:'N7',weight:1},{code:'B',weight:0.3}],lv:'7'},
+  {name:'ラベンダーアッシュ',s:[{code:'N7',weight:2},{code:'R7',weight:0.5},{code:'B',weight:0.5}],lv:'7'},
+  {name:'チェリーブラウン',s:[{code:'R5',weight:1},{code:'R7',weight:1}],lv:'6'},
+  {name:'ブルーブラック',s:[{code:'N3',weight:3},{code:'B',weight:0.5}],lv:'3'},
+  {name:'ボルドー',s:[{code:'R5',weight:3},{code:'B',weight:0.5}],lv:'5'},
+  {name:'ショコラベージュ',s:[{code:'R7',weight:1},{code:'Y9',weight:1},{code:'N9',weight:2}],lv:'8'},
+  {name:'ハニーブロンド',s:[{code:'Y9',weight:1},{code:'R9',weight:0.3},{code:'L',weight:1}],lv:'10'},
+];
+const pD=document.getElementById('prs');
+PRS.forEach(p=>{const b=document.createElement('button');b.className='ab';b.textContent=p.name;b.onclick=()=>{sSlots=p.s.map(s=>({...s}));document.getElementById('sLv').value=p.lv;rS();cS();};pD.appendChild(b);});
+rS();cS();render();
+</script>
+</body></html>
