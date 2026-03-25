@@ -88,7 +88,7 @@ body{font-family:var(--fb);background:var(--rc);color:var(--rt);font-size:13px;l
 </style>
 </head>
 <body>
-<div class="hdr"><div><div class="logo">INNO <span>IROCA</span></div><div class="sub">カラーレシピ＆調合シミュレーター v4 ─ REVOL</div></div><div style="font-size:10px;color:var(--rg)">384色 ─ 画像実測RGB ─ 白髪率対応</div></div>
+<div class="hdr"><div><div class="logo">INNO <span>IROCA</span></div><div class="sub">カラーレシピ＆調合シミュレーター v4 ─ REVOL</div></div><div style="font-size:10px;color:var(--rg)">434色 ─ 13薬剤(Racc対応) ─ 白髪率対応</div></div>
 <div class="nav">
 <button class="nb active" onclick="sw('list')">カラーリスト</button>
 <button class="nb" onclick="sw('matrix')">マトリクス</button>
@@ -111,7 +111,7 @@ body{font-family:var(--fb);background:var(--rc);color:var(--rt);font-size:13px;l
 <select id="lf" onchange="render()"><option value="">全レベル</option><option>3</option><option>4</option><option>5</option><option>5-6</option><option>6</option><option>6-7</option><option>7</option><option>8</option><option>9</option><option>10</option></select>
 <select id="sf" onchange="render()"><option value="">全おすすめ</option><option value="3">★★★</option><option value="2">★★以上</option><option value="1">★以上</option></select>
 </div>
-<div id="listView"><div class="st">Color Recipe Collection</div><div class="ss">INNO IROCA 調合マッピング 384色 ─ 白髪率スライダーで全色がリアルタイム変化</div><div class="dv"></div><div class="grid" id="gE"></div></div>
+<div id="listView"><div class="st">Color Recipe Collection</div><div class="ss">INNO IROCA 調合マッピング 434色 ─ 白髪率スライダーで全色がリアルタイム変化</div><div class="dv"></div><div class="grid" id="gE"></div></div>
 <div id="matrixView" style="display:none"><div class="st">Color Matrix</div><div class="ss">軸の組み合わせを選んで色の関係性を俯瞰</div><div class="dv"></div>
 <div style="display:flex;gap:4px;justify-content:center;margin-bottom:12px;flex-wrap:wrap">
 <button class="ab active" data-axis="lv-cat" onclick="setAx('lv-cat')">レベル×カテゴリ</button>
@@ -150,6 +150,7 @@ body{font-family:var(--fb);background:var(--rc);color:var(--rt);font-size:13px;l
 <tr><td>R7</td><td>(92,62,55)</td><td>(54,28,29)</td><td>Lv7レッド</td></tr>
 <tr><td>R9</td><td>(143,115,98)</td><td>(74,34,33)</td><td>Lv9レッド</td></tr>
 <tr><td>B</td><td>(66,79,97)</td><td>(37,41,43)</td><td>ブルーアクセント</td></tr>
+<tr><td>Racc</td><td>(112,62,53)</td><td>(97,53,47)</td><td>レッドアクセント ★v4.2追加</td></tr>
 <tr><td>L</td><td>(205,195,178)</td><td>(130,100,72)</td><td>ライトナー</td></tr></table></div></div>
 </div>
 <div class="ft">INNO IROCA カラーレシピ＆調合シミュレーター v4 ─ 株式会社レボル<br>※シミュレーションは参考値です。実際の発色は毛質・ダメージ・施術条件により異なります。</div>
@@ -170,6 +171,7 @@ const BC = {
   R7:  { w:[92,62,55],   b:[54,28,29]   },
   R9:  { w:[143,115,98], b:[74,34,33]   },
   B:   { w:[66,79,97],   b:[37,41,43]   },
+  Racc:{ w:[112,62,53],  b:[97,53,47]   },
   L:   { w:[205,195,178], b:[130,100,72] },
   // Gray color products (same as N-level equivalents)
   '5': { w:[72,60,46],   b:[41,30,22]   },
@@ -227,7 +229,8 @@ function parseR(mx,rt){
     if(mx.includes('ベースR'))c.push({code:'R7',weight:0.3});
     if(mx.includes('ベースY'))c.push({code:'Y7',weight:0.3});
     if(mx.includes('アクセントB')||mx.includes('アクセントR+B'))c.push({code:'B',weight:0.15});
-    if(mx.includes('アクセントR')&&!mx.includes('アクセントR+'))c.push({code:'R7',weight:0.15});
+    if(mx.includes('アクセントR+B'))c.push({code:'Racc',weight:0.15});
+    if(mx.includes('アクセントR')&&!mx.includes('アクセントR+'))c.push({code:'Racc',weight:0.15});
     return c;}
   const ps=mx.replace(/単品/,'').split('+').map(s=>s.trim()).filter(Boolean);
   const rs=rt.replace(/\/.*/,'').split(':').map(s=>parseFloat(s));
@@ -621,6 +624,61 @@ const R=[
 {n:382,cat:'マルチミックス',name:'タンザナイト',level:'6',mix:'R5+B+N7',ratio:'1:2:1',star:'★★',desc:'タンザナイト宝石',pc:'ブルベ冬',season:'秋冬'},
 {n:383,cat:'マルチミックス',name:'アレキサンドライト',level:'7',mix:'R7+B+Y7+N5',ratio:'1.5:1.5:0.5:0.5',star:'★',desc:'変色する宝石',pc:'ブルベ',season:'通年'},
 {n:384,cat:'マルチミックス',name:'オブシディアン',level:'4',mix:'N3+R5+B',ratio:'1:1:1.5',star:'★',desc:'黒曜石の暗い紫黒',pc:'ブルベ冬',season:'冬'},
+// === Racc（レッドアクセント）レシピ 385-434 ===
+// レッドアクセント（Raccを少量〜中量追加で赤み・暖かみを強調）
+{n:385,cat:'レッドアクセント',name:'ウォームグレージュ',level:'7',mix:'N7+Y7+Racc',ratio:'2:1:0.3',star:'★★',desc:'グレージュに暖かみをプラス',pc:'イエベ秋',season:'秋冬'},
+{n:386,cat:'レッドアクセント',name:'ブラッシュブラウン',level:'7',mix:'N7+Racc',ratio:'3:1',star:'★',desc:'頬紅のような柔らかい赤み',pc:'イエベ春',season:'春'},
+{n:387,cat:'レッドアクセント',name:'スパイシーベージュ',level:'8',mix:'Y7+N9+Racc',ratio:'2:1:0.5',star:'★★',desc:'ベージュにスパイスを効かせて',pc:'イエベ',season:'秋'},
+{n:388,cat:'レッドアクセント',name:'ロゼブラウン',level:'6',mix:'N5+N7+Racc',ratio:'1:2:0.5',star:'★★',desc:'ロゼワインのような艶',pc:'ブルベ夏',season:'通年'},
+{n:389,cat:'レッドアクセント',name:'フランボワーズブラウン',level:'6',mix:'N5+R7+Racc',ratio:'2:1:0.5',star:'★★★',desc:'木苺の甘酸っぱい赤み',pc:'ブルベ',season:'秋冬'},
+{n:390,cat:'レッドアクセント',name:'アンバーブラウン',level:'7',mix:'Y7+N7+Racc',ratio:'1:2:0.3',star:'★',desc:'琥珀色の温かみ',pc:'イエベ秋',season:'秋'},
+{n:391,cat:'レッドアクセント',name:'サンセットベージュ',level:'8',mix:'Y7+Y9+Racc',ratio:'2:1:0.5',star:'★',desc:'夕焼けのような暖色',pc:'イエベ春',season:'春夏'},
+{n:392,cat:'レッドアクセント',name:'クランベリーブラウン',level:'5',mix:'N5+R5+Racc',ratio:'2:1:0.8',star:'★★',desc:'クランベリーの深い赤',pc:'ブルベ冬',season:'秋冬'},
+{n:393,cat:'レッドアクセント',name:'ピーチブラウン',level:'7',mix:'N7+Y7+Racc',ratio:'2:1:0.5',star:'★★★',desc:'桃のような柔らかピンク',pc:'イエベ春',season:'春夏'},
+{n:394,cat:'レッドアクセント',name:'カッパーベージュ',level:'8',mix:'Y9+N7+Racc',ratio:'2:1:0.5',star:'★',desc:'銅色の艶めき',pc:'イエベ秋',season:'秋'},
+{n:395,cat:'レッドアクセント',name:'ルビーブラウン',level:'6',mix:'R5+N7+Racc',ratio:'1:2:0.8',star:'★★',desc:'ルビーの輝き',pc:'ブルベ冬',season:'冬'},
+{n:396,cat:'レッドアクセント',name:'ストロベリーベージュ',level:'8',mix:'Y7+N9+Racc',ratio:'1:2:0.8',star:'★★★',desc:'苺のような甘いピンクベージュ',pc:'イエベ春',season:'春'},
+{n:397,cat:'レッドアクセント',name:'ローズヒップ',level:'7',mix:'N7+R7+Racc',ratio:'2:1:0.3',star:'★',desc:'ローズヒップティーの色',pc:'ブルベ夏',season:'通年'},
+{n:398,cat:'レッドアクセント',name:'シナモンレッド',level:'6',mix:'N5+Y7+Racc',ratio:'1:1:0.8',star:'★',desc:'シナモンスティックの赤み',pc:'イエベ秋',season:'秋冬'},
+{n:399,cat:'レッドアクセント',name:'マゼンタブラウン',level:'5',mix:'R5+N5+Racc',ratio:'1:2:1',star:'★★',desc:'マゼンタの鮮やかさ',pc:'ブルベ冬',season:'冬'},
+// レッド主役Racc（Raccが主役＝比率1以上）
+{n:400,cat:'レッド主役Racc',name:'ピュアレッド',level:'7',mix:'Racc+N7',ratio:'2:1',star:'★★',desc:'混じりけのない純赤',pc:'ブルベ冬',season:'通年'},
+{n:401,cat:'レッド主役Racc',name:'ファイアレッド',level:'8',mix:'Racc+Y7+N9',ratio:'2:1:1',star:'★★★',desc:'炎のような鮮やかレッド',pc:'イエベ春',season:'春夏'},
+{n:402,cat:'レッド主役Racc',name:'チェリーレッド',level:'6',mix:'Racc+R5+N7',ratio:'2:1:1',star:'★★',desc:'チェリーの濃厚な赤',pc:'ブルベ冬',season:'秋冬'},
+{n:403,cat:'レッド主役Racc',name:'ガーネットレッド',level:'5',mix:'Racc+R5+N5',ratio:'2:1:1',star:'★',desc:'ガーネットの深い赤',pc:'ブルベ冬',season:'冬'},
+{n:404,cat:'レッド主役Racc',name:'ブラッドオレンジ',level:'8',mix:'Racc+Y7',ratio:'2:1',star:'★★',desc:'赤×黄の暖色オレンジ',pc:'イエベ春',season:'春夏'},
+{n:405,cat:'レッド主役Racc',name:'カーマインレッド',level:'7',mix:'Racc+N7+B',ratio:'2:2:0.3',star:'★★',desc:'深紅のカーマイン',pc:'ブルベ',season:'秋冬'},
+{n:406,cat:'レッド主役Racc',name:'スカーレット',level:'7',mix:'Racc+R7',ratio:'2:1',star:'★★★',desc:'鮮烈な緋色',pc:'ブルベ冬',season:'通年'},
+{n:407,cat:'レッド主役Racc',name:'ルージュ',level:'6',mix:'Racc+N5+R7',ratio:'2:1:1',star:'★★',desc:'口紅のような赤',pc:'ブルベ',season:'秋冬'},
+{n:408,cat:'レッド主役Racc',name:'ストロベリーレッド',level:'9',mix:'Racc+Y9+N9',ratio:'2:1:1',star:'★★',desc:'苺の鮮やかレッド',pc:'イエベ春',season:'春'},
+{n:409,cat:'レッド主役Racc',name:'レッドカッパー',level:'8',mix:'Racc+Y7+R9',ratio:'2:1:1',star:'★',desc:'赤銅色の輝き',pc:'イエベ秋',season:'秋'},
+// ダブルアクセント Racc+B（赤青アクセント同時使用でバイオレット〜複雑な色味）
+{n:410,cat:'ダブルアクセントRB',name:'プラムレッド',level:'6',mix:'N7+Racc+B',ratio:'2:1:0.5',star:'★★',desc:'プラムの赤紫',pc:'ブルベ',season:'秋冬'},
+{n:411,cat:'ダブルアクセントRB',name:'バーガンディ',level:'5',mix:'N5+Racc+B',ratio:'2:1:0.8',star:'★★★',desc:'ワインレッドの深み',pc:'ブルベ冬',season:'秋冬'},
+{n:412,cat:'ダブルアクセントRB',name:'マルベリー',level:'6',mix:'R5+Racc+B',ratio:'1:1:0.8',star:'★★',desc:'桑の実の赤紫',pc:'ブルベ',season:'秋'},
+{n:413,cat:'ダブルアクセントRB',name:'カシスバイオレット',level:'7',mix:'N7+Racc+B',ratio:'2:0.8:0.8',star:'★★★',desc:'カシスの赤み紫',pc:'ブルベ冬',season:'冬'},
+{n:414,cat:'ダブルアクセントRB',name:'レッドバイオレット',level:'7',mix:'N7+Racc+B',ratio:'1:1:1',star:'★★',desc:'赤と紫の等量ミックス',pc:'ブルベ',season:'通年'},
+{n:415,cat:'ダブルアクセントRB',name:'ワインレッド',level:'5',mix:'R5+Racc+B',ratio:'1:1.5:0.5',star:'★★★',desc:'赤ワインの色',pc:'ブルベ冬',season:'秋冬'},
+{n:416,cat:'ダブルアクセントRB',name:'ベリーバイオレット',level:'6',mix:'N5+R7+Racc+B',ratio:'1:1:1:0.5',star:'★★',desc:'ベリーの赤紫',pc:'ブルベ',season:'秋冬'},
+{n:417,cat:'ダブルアクセントRB',name:'チェリーバイオレット',level:'7',mix:'N7+Racc+B',ratio:'2:1.5:0.5',star:'★',desc:'チェリーと紫の融合',pc:'ブルベ夏',season:'秋'},
+{n:418,cat:'ダブルアクセントRB',name:'ボルドーパープル',level:'5',mix:'N5+Racc+B',ratio:'1:1:1',star:'★★',desc:'ボルドーワインの紫',pc:'ブルベ冬',season:'冬'},
+{n:419,cat:'ダブルアクセントRB',name:'ロゼバイオレット',level:'8',mix:'N9+Racc+B',ratio:'2:1:0.5',star:'★',desc:'ロゼの柔らかい紫み',pc:'ブルベ夏',season:'春'},
+// Racc入り既存カテゴリ拡張
+{n:420,cat:'ミルクティーベージュ',name:'ミルクティーロゼ',level:'7',mix:'Y7+N7+Racc',ratio:'2:1:0.3',star:'★★★',desc:'ミルクティーにロゼの華やぎ',pc:'イエベ春',season:'春'},
+{n:421,cat:'ピンクベージュ',name:'コーラルピンクRacc',level:'7',mix:'N7+Y7+Racc',ratio:'2:1:0.8',star:'★★',desc:'コーラルの鮮やかピンク',pc:'イエベ春',season:'春夏'},
+{n:422,cat:'ローズブラウン',name:'ディープローズRacc',level:'6',mix:'R5+N7+Racc',ratio:'1:2:0.5',star:'★★',desc:'Raccで強調したローズ',pc:'ブルベ',season:'秋冬'},
+{n:423,cat:'オレンジ/テラコッタ',name:'テラコッタレッド',level:'7',mix:'Y7+R7+Racc',ratio:'1:1:0.8',star:'★★★',desc:'赤みの強いテラコッタ',pc:'イエベ秋',season:'秋'},
+{n:424,cat:'レッド/チェリー',name:'チェリーブロッサム',level:'7',mix:'R7+N7+Racc',ratio:'1:2:0.5',star:'★★',desc:'桜のような淡い赤み',pc:'ブルベ夏',season:'春'},
+{n:425,cat:'ラベンダー',name:'ラベンダーロゼ',level:'7',mix:'N7+B+Racc',ratio:'3:0.5:0.3',star:'★★',desc:'ラベンダーにロゼのニュアンス',pc:'ブルベ夏',season:'春'},
+{n:426,cat:'ショコラ/モカ',name:'ルビーショコラ',level:'6',mix:'N5+R5+Racc',ratio:'2:1:0.5',star:'★★',desc:'ルビーのようなショコラ',pc:'ブルベ冬',season:'冬'},
+{n:427,cat:'グレージュ',name:'ロゼグレージュ',level:'7',mix:'N7+B+Racc',ratio:'3:0.3:0.3',star:'★★★',desc:'グレージュにロゼの温もり',pc:'ALL',season:'通年'},
+{n:428,cat:'ハイトーン特殊',name:'ハイトーンレッド',level:'10',mix:'N9+Racc+L',ratio:'1:1:1',star:'★★',desc:'Lv10の鮮やかレッド',pc:'ALL',season:'春夏'},
+{n:429,cat:'ハイトーン特殊',name:'サンセットハイトーン',level:'10',mix:'Y9+Racc+L',ratio:'1:1:1',star:'★',desc:'夕焼けハイトーン',pc:'イエベ春',season:'夏'},
+{n:430,cat:'ベージュ',name:'ウォームロゼベージュ',level:'7',mix:'Y7+N7+Racc',ratio:'2:2:0.3',star:'★★',desc:'ロゼ香るベージュ',pc:'イエベ春',season:'春'},
+{n:431,cat:'アッシュ',name:'アッシュロゼ',level:'7',mix:'N7+B+Racc',ratio:'2:0.8:0.3',star:'★★',desc:'アッシュにロゼの温度感',pc:'ALL',season:'通年'},
+{n:432,cat:'くすみ透明感',name:'くすみロゼ',level:'7',mix:'N7+Y7+B+Racc',ratio:'2:1:0.3:0.3',star:'★★',desc:'くすみの中にロゼが灯る',pc:'ブルベ夏',season:'通年'},
+{n:433,cat:'バイオレット',name:'レッドバイオレットRacc',level:'7',mix:'R7+B+Racc',ratio:'1:1:0.8',star:'★★',desc:'Raccで赤みの強いバイオレット',pc:'ブルベ',season:'秋冬'},
+{n:434,cat:'エクストリーム',name:'トリプルレッド',level:'6',mix:'R5+R7+Racc',ratio:'1:1:1',star:'★',desc:'ベース+アクセント3重赤',pc:'ブルベ冬',season:'冬'},
 ];
 
 R.forEach(r=>compute(r));
@@ -728,7 +786,7 @@ function cM(){document.getElementById('modal').classList.remove('show');}
 
 // === SIMULATOR ===
 let sSlots=[{code:'Y7',weight:2},{code:'N7',weight:1},{code:'R7',weight:0.5}];
-const DO=['N3','N5','N7','N9','Y5','Y7','Y9','R5','R7','R9','B','L'];
+const DO=['N3','N5','N7','N9','Y5','Y7','Y9','R5','R7','R9','B','Racc','L'];
 function rS(){
   let h='';sSlots.forEach((s,i)=>{
     const rgb=drugRGB(s.code);
