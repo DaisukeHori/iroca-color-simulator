@@ -51,6 +51,8 @@ body{font-family:var(--fb);background:var(--rc);color:var(--rt);font-size:13px;l
 .mx th:first-child{z-index:3}
 .csw{width:26px;height:16px;border-radius:2px;margin:0 auto 0;border:1px solid rgba(0,0,0,.08)}
 .cn{font-size:6px;color:var(--rg);max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0 auto;line-height:1.1}
+.mx-expand{font-size:7px;color:var(--rr);cursor:pointer;padding:1px 0;margin-top:1px;font-weight:700;letter-spacing:-.3px}
+.mx-expand:hover{text-decoration:underline}
 .ab{padding:4px 10px;border:1px solid var(--rb);border-radius:4px;cursor:pointer;font-size:10px;background:#fff;color:var(--rt);font-family:var(--fb);transition:.15s;margin:2px}
 .ab:hover,.ab.active{border-color:var(--rr);color:var(--rr);background:rgba(196,32,52,.04);font-weight:700}
 
@@ -644,13 +646,27 @@ function renderList(){
 
 let curAx='lv-cat';
 function setAx(a){curAx=a;document.querySelectorAll('.ab').forEach(b=>b.classList.toggle('active',b.dataset.axis===a));renderMx();}
+let mxCellId=0;
 function mxC(items){
   if(!items.length)return'<td style="color:#ddd">—</td>';
+  const id='mc'+mxCellId++;
+  const show=items.slice(0,3);
+  const rest=items.slice(3);
   let h='<td style="padding:2px">';
-  for(const it of items)h+=`<div style="cursor:pointer;margin-bottom:1px" onclick="sD(${it.n})" title="${it.name} ${it.mix} (${it.ratio})"><div class="csw" style="background:${it.hex}"></div><div class="cn">${it.name}</div></div>`;
+  for(const it of show)h+=`<div style="cursor:pointer;margin-bottom:1px" onclick="sD(${it.n})" title="${it.name} ${it.mix} (${it.ratio})"><div class="csw" style="background:${it.hex}"></div><div class="cn">${it.name}</div></div>`;
+  if(rest.length){
+    h+=`<div id="${id}" style="display:none">`;
+    for(const it of rest)h+=`<div style="cursor:pointer;margin-bottom:1px" onclick="sD(${it.n})" title="${it.name} ${it.mix} (${it.ratio})"><div class="csw" style="background:${it.hex}"></div><div class="cn">${it.name}</div></div>`;
+    h+=`</div><div class="mx-expand" onclick="toggleMxCell('${id}',this)">+${rest.length}色 ▼</div>`;
+  }
   return h+'</td>';
 }
-function renderMx(){
+function toggleMxCell(id,el){
+  const d=document.getElementById(id);
+  if(d.style.display==='none'){d.style.display='';el.textContent='▲ 閉じる';}
+  else{d.style.display='none';el.textContent='+'+d.children.length+'色 ▼';}
+}
+function renderMx(){mxCellId=0;
   const f=getF();
   const LVS=['3','4','5','6','7','8','9','10'],CTS=[...new Set(f.map(r=>r.cat))];
   const PCS=['ALL','イエベ','イエベ春','イエベ秋','ブルベ','ブルベ夏','ブルベ冬'];
