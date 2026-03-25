@@ -44,13 +44,13 @@ body{font-family:var(--fb);background:var(--rc);color:var(--rt);font-size:13px;l
 .ci .mt{font-size:10px;color:var(--rg);margin-top:1px}.ci .rc{font-size:10px;color:var(--rw);margin-top:1px}
 
 .mw{overflow-x:auto;background:#fff;border-radius:8px;border:1px solid var(--rb);padding:4px}
-.mx{border-collapse:collapse;width:100%;min-width:880px;table-layout:fixed}
-.mx th,.mx td{border:1px solid var(--rb);padding:3px;text-align:center;font-size:9px;vertical-align:top;overflow:hidden;word-break:break-all}
+.mx{border-collapse:collapse;width:100%;min-width:1200px}
+.mx th,.mx td{border:1px solid var(--rb);padding:2px;text-align:center;font-size:9px;vertical-align:top;word-break:break-all;max-height:200px;overflow-y:auto}
 .mx th{background:var(--rl);color:var(--rw);font-weight:700;padding:5px 3px}
-.mx th:first-child,.mx td:first-child{width:55px;min-width:55px;max-width:55px;background:var(--rl);color:var(--rw);font-weight:700;position:sticky;left:0;z-index:1}
+.mx th:first-child,.mx td:first-child{min-width:50px;max-width:70px;background:var(--rl);color:var(--rw);font-weight:700;position:sticky;left:0;z-index:1}
 .mx th:first-child{z-index:3}
-.csw{width:30px;height:22px;border-radius:3px;margin:0 auto 1px;border:1px solid rgba(0,0,0,.08)}
-.cn{font-size:7px;color:var(--rg);max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0 auto}
+.csw{width:26px;height:16px;border-radius:2px;margin:0 auto 0;border:1px solid rgba(0,0,0,.08)}
+.cn{font-size:6px;color:var(--rg);max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0 auto;line-height:1.1}
 .ab{padding:4px 10px;border:1px solid var(--rb);border-radius:4px;cursor:pointer;font-size:10px;background:#fff;color:var(--rt);font-family:var(--fb);transition:.15s;margin:2px}
 .ab:hover,.ab.active{border-color:var(--rr);color:var(--rr);background:rgba(196,32,52,.04);font-weight:700}
 
@@ -646,8 +646,9 @@ let curAx='lv-cat';
 function setAx(a){curAx=a;document.querySelectorAll('.ab').forEach(b=>b.classList.toggle('active',b.dataset.axis===a));renderMx();}
 function mxC(items){
   if(!items.length)return'<td style="color:#ddd">—</td>';
-  let h='<td>';for(const it of items.slice(0,3))h+=`<div style="cursor:pointer;margin-bottom:1px" onclick="sD(${it.n})"><div class="csw" style="background:${it.hex}"></div><div class="cn">${it.name}</div></div>`;
-  if(items.length>3)h+=`<div class="cn" style="color:var(--rr)">+${items.length-3}</div>`;return h+'</td>';
+  let h='<td style="padding:2px">';
+  for(const it of items)h+=`<div style="cursor:pointer;margin-bottom:1px" onclick="sD(${it.n})" title="${it.name} ${it.mix} (${it.ratio})"><div class="csw" style="background:${it.hex}"></div><div class="cn">${it.name}</div></div>`;
+  return h+'</td>';
 }
 function renderMx(){
   const f=getF();
@@ -665,9 +666,7 @@ function renderMx(){
     case'star-cat':rows=STS;cols=CTS;rl=STL;cll=CTS;gi=(r,c)=>f.filter(x=>x.star===r&&x.cat===c);break;
     default:rows=LVS;cols=CTS;rl=LVS.map(l=>'Lv'+l);cll=CTS;gi=(r,c)=>f.filter(x=>x.level.split('-')[0]===r&&x.cat===c);
   }
-  let h='<div class="mw"><table class="mx"><colgroup><col style="width:55px">';
-  for(const c of cll)h+='<col>';
-  h+='</colgroup><tr><th></th>';
+  let h='<div class="mw"><table class="mx"><tr><th style="min-width:50px"></th>';
   for(const c of cll)h+=`<th>${String(c).replace(/\//g,'/<wbr>')}</th>`;
   h+='</tr>';
   for(let i=0;i<rows.length;i++){h+=`<tr><td>${rl[i]}</td>`;for(const c of cols)h+=mxC(gi(rows[i],c));h+='</tr>';}
