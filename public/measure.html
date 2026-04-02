@@ -75,8 +75,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .table-wrap{max-height:70vh;overflow:auto;border:1px solid var(--border);border-radius:8px}
 
 /* Toast */
-.toast{position:fixed;bottom:20px;right:20px;background:var(--green);color:#fff;padding:12px 20px;border-radius:8px;font-size:13px;display:none;z-index:999;animation:fadeIn .3s}
-@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.8);background:var(--green);color:#fff;padding:24px 40px;border-radius:16px;font-size:18px;font-weight:700;display:none;z-index:9999;animation:toastPop .4s ease forwards;box-shadow:0 8px 40px rgba(0,0,0,0.5);text-align:center;min-width:300px}
+.toast.error{background:var(--accent)}
+@keyframes toastPop{0%{opacity:0;transform:translate(-50%,-50%) scale(0.8)}50%{transform:translate(-50%,-50%) scale(1.05)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+.toast-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:9998;display:none}
+.btn.saving{opacity:0.5;pointer-events:none}
+.btn.saved{background:var(--green) !important;pointer-events:none}
+.preview-card.saved{border-color:var(--green);background:rgba(34,197,94,0.05)}
 </style>
 </head>
 <body>
@@ -187,6 +192,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   </div>
 </div>
 
+<div class="toast-overlay" id="toastOverlay"></div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -282,10 +288,15 @@ function showPanel(id){
   if(id==='plan')loadPlan();
 }
 
-function toast(msg,color){
+function toast(msg, isError){
   const t=document.getElementById('toast');
-  t.textContent=msg;t.style.background=color||'var(--green)';t.style.display='block';
-  setTimeout(()=>t.style.display='none',3000);
+  const ov=document.getElementById('toastOverlay');
+  t.textContent=msg;
+  t.className='toast' + (isError ? ' error' : '');
+  t.style.display='block';
+  ov.style.display='block';
+  clearTimeout(t._timer);
+  t._timer=setTimeout(()=>{t.style.display='none';ov.style.display='none';}, 2000);
 }
 
 // === Upload ===
@@ -322,7 +333,7 @@ async function handleFiles(files){
           <p>${parsed.deltaE_m0m1!=null?'ΔE(M0-M1)='+parsed.deltaE_m0m1.toFixed(3):'M1なし'} | Serial: ${parsed.serial}</p>
         </div>
         <div class="preview-actions">
-          <button class="btn btn-primary btn-sm" onclick="saveSingle(${pendingFiles.length-1})">保存</button>
+          <button class="btn btn-primary btn-sm" onclick="saveSingle(${pendingFiles.length-1}, this)">保存</button>
         </div>`;
       preview.appendChild(card);
     }catch(err){
@@ -334,15 +345,18 @@ async function handleFiles(files){
     const allBtn=document.createElement('button');
     allBtn.className='btn btn-success';allBtn.style.marginTop='12px';
     allBtn.textContent=`全${pendingFiles.length}件を一括保存`;
-    allBtn.onclick=saveAll;
+    allBtn.onclick=function(){saveAll(this);};
     preview.appendChild(allBtn);
   }
 }
 
-async function saveSingle(idx){
+async function saveSingle(idx, btnEl){
   const p=pendingFiles[idx];
   const mi=parseInt(document.getElementById('measIndex').value);
   const notes=document.getElementById('uploadNotes').value;
+  
+  // ボタン状態: 保存中
+  if(btnEl){btnEl.textContent='保存中...';btnEl.classList.add('saving');}
   
   const row={
     sample_name:p.name,
@@ -364,14 +378,27 @@ async function saveSingle(idx){
   };
   
   const{error}=await sb.from('iroca_measurements').upsert(row,{onConflict:'sample_name,meas_index'});
-  if(error){toast('エラー: '+error.message,'var(--accent)');console.error(error);}
-  else toast(`✅ ${p.name} (${mi}回目) を保存しました`);
+  if(error){
+    toast('❌ 保存エラー: '+error.message, true);
+    if(btnEl){btnEl.textContent='保存';btnEl.classList.remove('saving');}
+    console.error(error);
+  } else {
+    toast(`✅ 保存しました\n${p.name} (${mi}回目)`);
+    if(btnEl){
+      btnEl.textContent='✅ 保存済';
+      btnEl.classList.remove('saving');
+      btnEl.classList.add('saved');
+      btnEl.closest('.preview-card')?.classList.add('saved');
+    }
+  }
 }
 
-async function saveAll(){
+async function saveAll(btnEl){
   const mi=parseInt(document.getElementById('measIndex').value);
   const notes=document.getElementById('uploadNotes').value;
   let ok=0,fail=0;
+  
+  if(btnEl){btnEl.textContent='保存中...';btnEl.classList.add('saving');}
   
   for(const p of pendingFiles){
     const row={
@@ -382,7 +409,18 @@ async function saveAll(){
     const{error}=await sb.from('iroca_measurements').upsert(row,{onConflict:'sample_name,meas_index'});
     if(error)fail++;else ok++;
   }
-  toast(`✅ ${ok}件保存 / ${fail}件エラー`);
+  
+  if(fail>0) toast(`⚠️ ${ok}件保存 / ${fail}件エラー`, true);
+  else toast(`✅ ${ok}件すべて保存しました`);
+  
+  if(btnEl){
+    btnEl.textContent=`✅ ${ok}件保存済`;
+    btnEl.classList.remove('saving');
+    btnEl.classList.add('saved');
+  }
+  // カードも全て保存済み表示に
+  document.querySelectorAll('.preview-card').forEach(c=>c.classList.add('saved'));
+  document.querySelectorAll('.preview-card .btn-primary').forEach(b=>{b.textContent='✅ 保存済';b.classList.add('saved');});
 }
 
 // === Data Table ===
@@ -422,7 +460,7 @@ async function loadData(){
 async function deleteMeas(id){
   if(!confirm('この測定を削除しますか？'))return;
   await sb.from('iroca_measurements').delete().eq('id',id);
-  loadData();toast('削除しました','var(--sub)');
+  loadData();toast('🗑️ 削除しました');
 }
 
 // === Analysis ===
