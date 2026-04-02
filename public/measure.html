@@ -161,7 +161,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   <div class="panel" id="panel-data">
     <div class="stats" id="statsRow"></div>
     <div class="toolbar">
-      <select id="filterPhase" onchange="loadData()"><option value="">全Phase</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option></select>
+      <select id="filterPhase" onchange="loadData()"><option value="">全Phase</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>H</option></select>
       <input type="text" id="filterName" placeholder="サンプル名で検索..." oninput="loadData()" style="background:var(--card);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:4px;font-size:12px;width:200px">
       <div class="bulk-bar" id="bulkBar">
         <span id="bulkCount">0件選択</span>
@@ -206,7 +206,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   <!-- PLAN PANEL -->
   <div class="panel" id="panel-plan">
     <div class="toolbar">
-      <select id="planPhase" onchange="loadPlan()"><option value="">全Phase</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option></select>
+      <select id="planPhase" onchange="loadPlan()"><option value="">全Phase</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>H</option></select>
       <span class="spacer"></span>
       <span id="planProgress" style="font-size:12px;color:var(--sub)"></span>
     </div>
@@ -235,7 +235,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       </div>
       <div class="stat-card" style="cursor:pointer" onclick="exportCSV('plan')">
         <div class="num" style="font-size:20px">📋 実験計画CSV</div>
-        <div class="label">170サンプルの計画 + 進捗状況</div>
+        <div class="label">実験計画 + 進捗状況</div>
       </div>
     </div>
   </div>
@@ -755,7 +755,7 @@ async function loadData(){
   document.getElementById('statsRow').innerHTML=`
     <div class="stat-card"><div class="num">${data.length}</div><div class="label">総測定数</div></div>
     <div class="stat-card"><div class="num">${uniqueSamples.size}</div><div class="label">ユニークサンプル数</div></div>
-    <div class="stat-card"><div class="num">${matchedPlanCount}/170</div><div class="label">計画進捗（実験計画と一致）</div></div>
+    <div class="stat-card"><div class="num">${matchedPlanCount}/${planIds.size}</div><div class="label">計画進捗（実験計画と一致）</div></div>
     <div class="stat-card"><div class="num" style="color:${anomalyCount>0?'var(--accent)':warnCount>0?'var(--yellow)':'var(--green)'}">${anomalyCount>0?'🔴 '+anomalyCount:warnCount>0?'⚠️ '+warnCount:'✅ 0'}</div><div class="label">異常値・要確認</div></div>`;
   
   const tbody=document.getElementById('dataBody');
