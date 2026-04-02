@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IROCA 測色マニュアル — efi ES-2000 + i1Profiler</title>
+<style>
+  :root {
+    --primary: #1a1a2e;
+    --accent: #e94560;
+    --bg: #f8f9fa;
+    --card: #ffffff;
+    --text: #2d3436;
+    --muted: #636e72;
+    --border: #dfe6e9;
+    --step-bg: #0a3d62;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+  }
+
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, var(--primary) 0%, #16213e 100%);
+    color: white;
+    padding: 40px 20px;
+    text-align: center;
+  }
+  .header h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: 8px; }
+  .header .subtitle { font-size: 0.95rem; opacity: 0.8; }
+  .header .version {
+    display: inline-block;
+    margin-top: 12px;
+    background: var(--accent);
+    color: white;
+    padding: 4px 16px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  /* Navigation */
+  .toc {
+    max-width: 800px;
+    margin: -20px auto 30px;
+    background: var(--card);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    padding: 24px 30px;
+    position: relative;
+    z-index: 1;
+  }
+  .toc h2 { font-size: 1rem; color: var(--muted); margin-bottom: 12px; letter-spacing: 0.05em; }
+  .toc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 8px;
+  }
+  .toc a {
+    display: block;
+    padding: 10px 14px;
+    background: var(--bg);
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--text);
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  .toc a:hover { background: #e8f0fe; color: #1967d2; }
+  .toc a .num {
+    display: inline-block;
+    width: 28px;
+    height: 28px;
+    line-height: 28px;
+    text-align: center;
+    background: var(--step-bg);
+    color: white;
+    border-radius: 50%;
+    font-size: 0.75rem;
+    font-weight: 700;
+    margin-right: 8px;
+  }
+
+  /* Main content */
+  .content { max-width: 800px; margin: 0 auto; padding: 0 20px 60px; }
+
+  /* Section */
+  .section {
+    margin-bottom: 50px;
+  }
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding-bottom: 12px;
+    border-bottom: 3px solid var(--accent);
+  }
+  .section-title .icon {
+    width: 44px;
+    height: 44px;
+    background: var(--accent);
+    color: white;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+  }
+  .section-title h2 { font-size: 1.3rem; }
+
+  /* Step */
+  .step {
+    background: var(--card);
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    background: var(--step-bg);
+    color: white;
+  }
+  .step-num {
+    width: 36px;
+    height: 36px;
+    line-height: 36px;
+    text-align: center;
+    background: var(--accent);
+    border-radius: 50%;
+    font-weight: 800;
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+  .step-header h3 { font-size: 1.05rem; font-weight: 600; }
+  .step-body { padding: 20px; }
+  .step-body p { margin-bottom: 12px; color: var(--text); font-size: 0.95rem; }
+  .step-body img {
+    width: 100%;
+    max-width: 600px;
+    display: block;
+    margin: 12px auto;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  .step-body img:hover { transform: scale(1.02); }
+
+  /* Warning / Tip boxes */
+  .box {
+    padding: 14px 18px;
+    border-radius: 8px;
+    margin: 14px 0;
+    font-size: 0.9rem;
+  }
+  .box-warn {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    color: #856404;
+  }
+  .box-tip {
+    background: #d1ecf1;
+    border-left: 4px solid #17a2b8;
+    color: #0c5460;
+  }
+  .box-danger {
+    background: #f8d7da;
+    border-left: 4px solid #dc3545;
+    color: #721c24;
+  }
+  .box-success {
+    background: #d4edda;
+    border-left: 4px solid #28a745;
+    color: #155724;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding: 30px;
+    color: var(--muted);
+    font-size: 0.8rem;
+    border-top: 1px solid var(--border);
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  .footer a { color: var(--accent); text-decoration: none; }
+
+  /* Lightbox */
+  .lightbox {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.9);
+    z-index: 1000;
+    cursor: zoom-out;
+    justify-content: center;
+    align-items: center;
+  }
+  .lightbox.active { display: flex; }
+  .lightbox img {
+    max-width: 95vw;
+    max-height: 95vh;
+    border-radius: 8px;
+  }
+
+  /* Print */
+  @media print {
+    .header { padding: 20px; }
+    .toc { box-shadow: none; border: 1px solid #ccc; }
+    .step { break-inside: avoid; box-shadow: none; border: 1px solid #ddd; }
+    .step-body img { max-width: 500px; }
+    .lightbox { display: none !important; }
+  }
+
+  /* Mobile */
+  @media (max-width: 600px) {
+    .header h1 { font-size: 1.3rem; }
+    .step-body img { max-width: 100%; }
+    .toc-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <h1>IROCA 測色マニュアル</h1>
+  <div class="subtitle">efi ES-2000（i1Pro 2）+ i1Profiler による毛束スペクトル測定手順</div>
+  <div class="version">v1.0 — 2026年4月</div>
+</div>
+
+<!-- Table of Contents -->
+<nav class="toc">
+  <h2>目次</h2>
+  <div class="toc-grid">
+    <a href="#sec-hw"><span class="num">A</span>ハードウェア準備</a>
+    <a href="#sec-cal"><span class="num">B</span>キャリブレーション</a>
+    <a href="#sec-sw"><span class="num">C</span>ソフトウェア設定</a>
+    <a href="#sec-meas"><span class="num">D</span>毛束の測定</a>
+    <a href="#sec-save"><span class="num">E</span>保存とアップロード</a>
+    <a href="#sec-tips"><span class="num">F</span>注意事項・Tips</a>
+  </div>
+</nav>
+
+<div class="content">
+
+  <!-- ============================================ -->
+  <!-- A: Hardware Setup -->
+  <!-- ============================================ -->
+  <section class="section" id="sec-hw">
+    <div class="section-title">
+      <div class="icon">A</div>
+      <h2>ハードウェア準備</h2>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">1</div>
+        <h3>ケースを開けて付属品を確認</h3>
+      </div>
+      <div class="step-body">
+        <p>ケースの中に以下が揃っていることを確認してください。</p>
+        <ul style="margin:0 0 12px 20px; font-size:0.93rem; color:#555;">
+          <li>efi ES-2000 本体</li>
+          <li>キャリブレーション台</li>
+          <li>USBケーブル（USB-A ↔ USB-B）</li>
+          <li>ストラップ・ポーチ類</li>
+        </ul>
+        <img src="images/IMG_3091.jpeg" alt="ケース内の付属品一覧" onclick="openLightbox(this)">
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">2</div>
+        <h3>本体を取り出す</h3>
+      </div>
+      <div class="step-body">
+        <p>efi ES-2000 本体を取り出します。中身はX-Rite i1Pro 2と同じです（EFI/Fieryブランドのみ異なる）。</p>
+        <img src="images/IMG_3092.jpeg" alt="efi ES-2000 本体" onclick="openLightbox(this)">
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">3</div>
+        <h3>キャリブレーション台の上に本体を置く</h3>
+      </div>
+      <div class="step-body">
+        <p>キャリブレーション台を机に置き、その上に本体をセットします。台の溝に本体がぴったりはまります。</p>
+        <img src="images/IMG_3096.jpeg" alt="本体をキャリブレーション台に乗せた状態" onclick="openLightbox(this)">
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">4</div>
+        <h3>USBケーブルを本体に接続</h3>
+      </div>
+      <div class="step-body">
+        <p>USB-Bコネクタ（四角い方）を本体側面のポートに挿します。</p>
+        <img src="images/IMG_3097.jpeg" alt="USB-Bポートにケーブルを挿す" onclick="openLightbox(this)">
+        <p>挿したらこのような状態になります。</p>
+        <img src="images/IMG_3098.jpeg" alt="ケーブル接続完了" onclick="openLightbox(this)">
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">5</div>
+        <h3>PCにUSBを接続</h3>
+      </div>
+      <div class="step-body">
+        <p>USB-A端子（平たい方）を専用PC（Surface Pro）のUSBポートに挿します。</p>
+        <img src="images/IMG_3100.jpeg" alt="USB-A端子をPCに挿す" onclick="openLightbox(this)">
+        <p>セットアップ完成の全体像です。</p>
+        <img src="images/IMG_3101.jpeg" alt="全体セットアップ完成" onclick="openLightbox(this)">
+        <div class="box box-success">✅ ハードウェアの準備完了です。次にキャリブレーションを行います。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- B: Calibration -->
+  <!-- ============================================ -->
+  <section class="section" id="sec-cal">
+    <div class="section-title">
+      <div class="icon">B</div>
+      <h2>キャリブレーション</h2>
+    </div>
+
+    <div class="box box-warn">⚠️ キャリブレーションは<strong>毎回の測定セッション開始時</strong>に必ず行ってください。前回やったから大丈夫、ということはありません。</div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">6</div>
+        <h3>本体をキャリブレーション台から持ち上げる</h3>
+      </div>
+      <div class="step-body">
+        <p>まず本体を台から外します。台の上面を操作するためです。</p>
+        <img src="images/IMG_3103.jpeg" alt="キャリブレーション台（閉じた状態）" onclick="openLightbox(this)">
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">7</div>
+        <h3>つまみをスライドして白色タイルを露出させる</h3>
+      </div>
+      <div class="step-body">
+        <p>台のつまみを指でスライドさせます。</p>
+        <img src="images/IMG_3104.jpeg" alt="つまみをスライド" onclick="openLightbox(this)">
+        <p>すると白色キャリブレーションタイルが見えます。「CLEAN WHITE TILE」のステッカーが目印です。</p>
+        <img src="images/IMG_3105.jpeg" alt="白色タイルが露出" onclick="openLightbox(this)">
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">8</div>
+        <h3>白色タイルにゴミがないことを確認</h3>
+      </div>
+      <div class="step-body">
+        <p>白色タイルの表面にホコリや指紋がないことを確認してください。汚れがあると校正精度に影響します。</p>
+        <img src="images/IMG_3106.jpeg" alt="白色タイルのアップ" onclick="openLightbox(this)">
+        <div class="box box-danger">❌ 汚れている場合は、付属のクリーニングクロス（なければメガネ拭き）で優しく拭いてください。素手で触らないこと。</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">9</div>
+        <h3>本体を台に戻す</h3>
+      </div>
+      <div class="step-body">
+        <p>本体のセンサー窓が白色タイルの真上に来るように、台の溝にセットします。LEDが光っていれば接続OKです。</p>
+        <img src="images/IMG_3107.jpeg" alt="本体を台に戻す（LED点灯）" onclick="openLightbox(this)">
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">10</div>
+        <h3>i1Profilerでキャリブレーション実行</h3>
+      </div>
+      <div class="step-body">
+        <p>i1Profilerの測定画面で「キャリブレーション」ボタンをクリックします。</p>
+        <img src="images/006.jpg" alt="測定画面 — キャリブレーション要求" onclick="openLightbox(this)">
+        <p>キャリブレーション実行中の表示。数秒で完了します。</p>
+        <img src="images/007.jpg" alt="キャリブレーション実行中" onclick="openLightbox(this)">
+        <div class="box box-success">✅ キャリブレーション完了。「装置の準備が完了しました。」と表示されればOKです。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- C: Software Setup -->
+  <!-- ============================================ -->
+  <section class="section" id="sec-sw">
+    <div class="section-title">
+      <div class="icon">C</div>
+      <h2>ソフトウェア設定（初回のみ）</h2>
+    </div>
+
+    <div class="box box-tip">💡 一度ワークフローを保存すれば、2回目以降はStep 14から開始できます。</div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">11</div>
+        <h3>i1Profilerを起動</h3>
+      </div>
+      <div class="step-body">
+        <p>デスクトップの「i1Profiler」アイコンをダブルクリックします。</p>
+        <img src="images/001.jpg" alt="デスクトップのi1Profilerアイコン" onclick="openLightbox(this)">
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">12</div>
+        <h3>ホーム画面の設定を確認</h3>
+      </div>
+      <div class="step-body">
+        <p>ホーム画面で以下の4点を確認します。</p>
+        <ol style="margin:0 0 12px 20px; font-size:0.93rem; color:#555;">
+          <li><strong>①「詳細」モード</strong>に切り替え（右上のトグル）</li>
+          <li><strong>②「i1Pro 2」</strong>がディスプレイ装置として認識されていること</li>
+          <li><strong>③ ライセンス</strong>に緑チェックが付いていること</li>
+          <li><strong>④ 左メニュー「チャート測定」</strong>をクリック</li>
+        </ol>
+        <img src="images/002.jpg" alt="ホーム画面" onclick="openLightbox(this)">
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">13</div>
+        <h3>チャート定義を設定</h3>
+      </div>
+      <div class="step-body">
+        <p>「チャートの定義」画面で、パッチレイアウトを以下のように設定します。</p>
+        <ul style="margin:0 0 12px 20px; font-size:0.93rem; color:#555;">
+          <li><strong>行数: 1</strong></li>
+          <li><strong>列数: 1</strong></li>
+        </ul>
+        <p>1パッチ＝1回の測定に対応します。右下の「次へ ▶」をクリック。</p>
+        <img src="images/003.jpg" alt="チャート定義（行1×列1）" onclick="openLightbox(this)">
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">14</div>
+        <h3>測定モードを選択</h3>
+      </div>
+      <div class="step-body">
+        <p>「測定」画面が開いたら、測定モードで <strong>「スポット（M0, M1, M2, OBC）」</strong> を選択します。</p>
+        <div class="box box-warn">⚠️ 「シングルスキャン（M0）」ではなく「スポット（M0, M1, M2, OBC）」を選んでください。3条件を一度に測定し、蛍光QCに使います。</div>
+        <img src="images/006.jpg" alt="測定モード選択" onclick="openLightbox(this)">
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- D: Measurement -->
+  <!-- ============================================ -->
+  <section class="section" id="sec-meas">
+    <div class="section-title">
+      <div class="icon">D</div>
+      <h2>毛束の測定</h2>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">15</div>
+        <h3>コピー用紙の上で毛束をキュッと束ねる</h3>
+      </div>
+      <div class="step-body">
+        <p>白いコピー用紙を台の上に敷き、毛束を横に広げてセンサーの測定窓（φ4.5mm）を十分に覆えるようにまとめます。</p>
+        <img src="images/IMG_3109.jpeg" alt="毛束をコピー用紙の上に配置" onclick="openLightbox(this)">
+        <div class="box box-tip">
+          💡 <strong>なぜコピー用紙（白）？</strong><br>
+          コピー用紙には蛍光増白剤（OBA）が含まれています。もし毛束が薄くて光が紙まで漏れると、M0とM1のスペクトルに差が出てΔEが上がります。これにより<strong>「毛束の厚さが不十分」をΔE値で自動検出</strong>できます。毛束が十分厚ければM0=M1=M2（ΔE=0）になるので影響ありません。
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">16</div>
+        <h3>本体を台から外して毛束に載せる</h3>
+      </div>
+      <div class="step-body">
+        <p>本体をキャリブレーション台から外し、センサー窓が毛束の中央に来るように載せます。</p>
+        <img src="images/IMG_3110.jpeg" alt="本体を毛束に載せる" onclick="openLightbox(this)">
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">17</div>
+        <h3>ボタンを押して測定</h3>
+      </div>
+      <div class="step-body">
+        <p>本体を手で軽く押さえながら、<strong>横のボタン</strong>を押します。「カチッ」と光が出て一瞬で測定完了です。</p>
+        <img src="images/IMG_3111.jpeg" alt="ボタンを押して測定" onclick="openLightbox(this)">
+        <div class="box box-warn">⚠️ 測定中は本体を動かさないでください。手ブレでスペクトルがばらつきます。</div>
+        <p>画面に測定結果（色パッチ）が表示されれば成功です。</p>
+        <img src="images/008.jpg" alt="測定完了画面" onclick="openLightbox(this)">
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- E: Save & Upload -->
+  <!-- ============================================ -->
+  <section class="section" id="sec-save">
+    <div class="section-title">
+      <div class="icon">E</div>
+      <h2>保存とアップロード</h2>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">18</div>
+        <h3>CxFファイルとして保存</h3>
+      </div>
+      <div class="step-body">
+        <p>画面下部の「保存」ボタンをクリックします。</p>
+        <img src="images/008.jpg" alt="保存ボタン" onclick="openLightbox(this)">
+        <p>保存ダイアログが開いたら：</p>
+        <ol style="margin:0 0 12px 20px; font-size:0.93rem; color:#555;">
+          <li>保存先を <strong>デスクトップ</strong> に指定</li>
+          <li>ファイル名を <strong>サンプルID</strong> にする（例: <code>a001-1</code>）</li>
+          <li>ファイルの種類が <strong>「CxFファイル (*.cxf)」</strong> になっていることを確認</li>
+          <li>「保存」をクリック</li>
+        </ol>
+        <img src="images/009.jpg" alt="ファイル名入力+CxF保存" onclick="openLightbox(this)">
+        <div class="box box-danger">
+          ❌ <strong>ファイル名のルール（重要）</strong><br>
+          サンプルID（例: <code>a001</code>）の後にハイフンと回数番号を付けてください。<br>
+          1回目: <code>a001-1</code>　2回目: <code>a001-2</code>　… 5回目: <code>a001-5</code><br>
+          管理ツール側では同じサンプル名の回数を自動でカウントするため、ファイル名は自由ですが、サンプルを特定できる名前にしてください。
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">19</div>
+        <h3>測色データ管理ツールにアップロード</h3>
+      </div>
+      <div class="step-body">
+        <p>ブラウザで <a href="https://daisukehori.github.io/iroca-color-simulator/measure.html" target="_blank" style="color:var(--accent);font-weight:600;">測色データ管理ツール</a> を開きます。</p>
+        <p>保存した <code>.cxf</code> ファイルを画面の「ドロップゾーン」にドラッグ＆ドロップするだけです。</p>
+        <ul style="margin:0 0 12px 20px; font-size:0.93rem; color:#555;">
+          <li>M0/M1/M2スペクトルが自動抽出されます</li>
+          <li>Lab値・sRGBが自動計算されます</li>
+          <li>ΔE(M0-M1)が自動計算 → 異常値は赤で表示</li>
+          <li>同じサンプル名なら回数が自動カウントされます</li>
+          <li>5回測定が完了すると中央値が自動計算されます</li>
+        </ul>
+        <div class="box box-success">✅ 1ファイルにM0/M1/M2の3条件が全て含まれているので、M0のファイル1つだけアップロードすればOKです。</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">20</div>
+        <h3>次のサンプルを測定する（繰り返し）</h3>
+      </div>
+      <div class="step-body">
+        <p>次の毛束を準備し、<strong>Step 15〜19を繰り返します</strong>。</p>
+        <div class="box box-tip">
+          💡 <strong>2回目以降のキャリブレーション</strong><br>
+          同じセッション内であれば毎回キャリブレーションする必要はありません。ただし、<strong>1時間以上経過した場合</strong>や<strong>温度が大きく変わった場合</strong>は再キャリブレーションしてください。
+        </div>
+        <p>同じサンプルを5回繰り返し測定するのが標準プロトコルです。毎回少し位置をずらして測定してください。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- F: Tips -->
+  <!-- ============================================ -->
+  <section class="section" id="sec-tips">
+    <div class="section-title">
+      <div class="icon">F</div>
+      <h2>注意事項・Tips</h2>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">!</div>
+        <h3>光漏れの検出方法</h3>
+      </div>
+      <div class="step-body">
+        <p>管理ツールのデータ一覧で <strong>ΔE(M0-M1)</strong> の列を確認してください。</p>
+        <table style="width:100%; border-collapse:collapse; font-size:0.9rem; margin:12px 0;">
+          <thead>
+            <tr style="background:#f1f1f1;">
+              <th style="padding:8px 12px; text-align:left; border-bottom:2px solid #ddd;">ΔE(M0-M1)</th>
+              <th style="padding:8px 12px; text-align:left; border-bottom:2px solid #ddd;">判定</th>
+              <th style="padding:8px 12px; text-align:left; border-bottom:2px solid #ddd;">アクション</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td style="padding:8px 12px; border-bottom:1px solid #eee;">< 0.3</td><td style="padding:8px 12px; border-bottom:1px solid #eee;">✅ 正常</td><td style="padding:8px 12px; border-bottom:1px solid #eee;">問題なし</td></tr>
+            <tr><td style="padding:8px 12px; border-bottom:1px solid #eee;">0.3 〜 1.0</td><td style="padding:8px 12px; border-bottom:1px solid #eee;">⚠️ 警告</td><td style="padding:8px 12px; border-bottom:1px solid #eee;">毛束をもう少し厚く束ねて再測定</td></tr>
+            <tr><td style="padding:8px 12px;">≥ 1.0</td><td style="padding:8px 12px;">🔴 異常</td><td style="padding:8px 12px;">光漏れ発生。毛束の密度を確保して必ず再測定</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">!</div>
+        <h3>測定のコツ</h3>
+      </div>
+      <div class="step-body">
+        <ul style="margin:0 0 0 20px; font-size:0.93rem; color:#555; line-height:2;">
+          <li>毛束は<strong>センサー窓（φ4.5mm）の周囲に隙間がないように</strong>幅2cm以上にまとめる</li>
+          <li>5回の測定は<strong>毎回少し位置をずらす</strong>（回転・スライド）</li>
+          <li>毛束の<strong>根元付近ではなく中間部分</strong>を測定する（根元は染まりが異なる場合がある）</li>
+          <li>センサー窓に<strong>毛髪が付着していないか</strong>時々確認する</li>
+          <li>直射日光の当たらない場所で測定する</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">!</div>
+        <h3>片付け</h3>
+      </div>
+      <div class="step-body">
+        <ul style="margin:0 0 0 20px; font-size:0.93rem; color:#555; line-height:2;">
+          <li>キャリブレーション台のスライドを<strong>閉じて</strong>白色タイルを保護する</li>
+          <li>本体を台に乗せた状態でケースに戻す</li>
+          <li>USBケーブルをまとめてケースに収納</li>
+          <li>センサー窓のキャップを被せる（ゴミ・傷防止）</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>IROCA 測色マニュアル v1.0 — Revol Corporation / MHD医健</p>
+  <p><a href="../index.html">← シミュレーターに戻る</a> ｜ <a href="../measure.html">測色データ管理ツール</a></p>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lightbox-img" src="" alt="">
+</div>
+
+<script>
+function openLightbox(img) {
+  document.getElementById('lightbox-img').src = img.src;
+  document.getElementById('lightbox').classList.add('active');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLightbox();
+});
+</script>
+
+</body>
+</html>
