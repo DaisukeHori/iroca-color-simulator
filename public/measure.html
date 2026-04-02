@@ -87,6 +87,27 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .btn.saving{opacity:0.5;pointer-events:none}
 .btn.saved{background:var(--green) !important;pointer-events:none}
 .preview-card.saved{border-color:var(--green);background:rgba(34,197,94,0.05)}
+
+/* Checkbox */
+.chk{width:16px;height:16px;accent-color:var(--accent);cursor:pointer}
+.data-table tr.selected{background:rgba(196,32,52,0.1)}
+.bulk-bar{display:none;align-items:center;gap:12px;padding:8px 16px;background:var(--accent);border-radius:8px;color:#fff;font-size:13px;font-weight:600}
+.bulk-bar.show{display:flex}
+
+/* Detail Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:5000;display:none;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:16px;max-width:700px;width:90vw;max-height:85vh;overflow-y:auto;padding:0;box-shadow:0 16px 64px rgba(0,0,0,0.6)}
+.modal-close{position:absolute;top:12px;right:16px;background:none;border:none;color:var(--sub);font-size:24px;cursor:pointer;z-index:1}
+.modal-close:hover{color:var(--text)}
+.modal-color{width:100%;aspect-ratio:2/1;border-radius:16px 16px 0 0;position:relative}
+.modal-color-label{position:absolute;bottom:12px;left:16px;font-size:28px;font-weight:800;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,0.5)}
+.modal-body{padding:24px}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.modal-item{background:var(--bg);border-radius:8px;padding:12px}
+.modal-item .lbl{font-size:10px;color:var(--sub);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
+.modal-item .val{font-size:16px;font-weight:700}
+.modal-actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -133,12 +154,18 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <div class="toolbar">
       <select id="filterPhase" onchange="loadData()"><option value="">全Phase</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option></select>
       <input type="text" id="filterName" placeholder="サンプル名で検索..." oninput="loadData()" style="background:var(--card);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:4px;font-size:12px;width:200px">
+      <div class="bulk-bar" id="bulkBar">
+        <span id="bulkCount">0件選択</span>
+        <button class="btn btn-sm" style="background:#fff;color:var(--accent)" onclick="bulkDelete()">🗑 選択を削除</button>
+        <button class="btn btn-sm" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.4)" onclick="clearSelection()">✕ 解除</button>
+      </div>
       <span class="spacer"></span>
       <button class="btn btn-secondary btn-sm" onclick="loadData()">🔄 更新</button>
     </div>
     <div class="table-wrap">
       <table class="data-table" id="dataTable">
         <thead><tr>
+          <th style="width:32px"><input type="checkbox" class="chk" id="selectAll" onchange="toggleSelectAll(this.checked)"></th>
           <th>色</th>
           <th class="sortable" onclick="setSort('sample_name')">サンプル名</th>
           <th class="sortable" onclick="setSort('meas_index')">回</th>
@@ -148,7 +175,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
           <th>sRGB</th>
           <th class="sortable" onclick="setSort('delta_e_m0m1')">ΔE(M0-M1)</th>
           <th class="sortable sort-desc" onclick="setSort('created_at')">日時</th>
-          <th></th>
         </tr></thead>
         <tbody id="dataBody"></tbody>
       </table>
@@ -202,6 +228,20 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
         <div class="num" style="font-size:20px">📋 実験計画CSV</div>
         <div class="label">170サンプルの計画 + 進捗状況</div>
       </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="detailModal" onclick="if(event.target===this)closeDetail()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeDetail()">✕</button>
+    <div class="modal-color" id="detailColor">
+      <div class="modal-color-label" id="detailName"></div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-grid" id="detailGrid"></div>
+      <div id="detailSpectrum"></div>
+      <div class="modal-actions" id="detailActions"></div>
     </div>
   </div>
 </div>
@@ -439,12 +479,13 @@ async function saveAll(btnEl){
 
 // === Data Table ===
 let sortCol = 'created_at';
-let sortDir = 'desc';  // デフォルト: 日時の新しい順
+let sortDir = 'desc';
+let selectedIds = new Set();
+let tableData = [];  // store for modal access
 
 function setSort(col){
   if(sortCol === col) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
   else { sortCol = col; sortDir = (col === 'created_at') ? 'desc' : 'asc'; }
-  // ヘッダーの表示更新
   document.querySelectorAll('#dataTable th.sortable').forEach(th => {
     th.classList.remove('sort-asc','sort-desc');
   });
@@ -452,6 +493,148 @@ function setSort(col){
   const colMap = ['sample_name','meas_index','lab_l','lab_a','lab_b','delta_e_m0m1','created_at'];
   const idx = colMap.indexOf(col);
   if(idx >= 0 && headers[idx]) headers[idx].classList.add(sortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+  loadData();
+}
+
+function toggleSelectAll(checked){
+  document.querySelectorAll('.row-chk').forEach(cb=>{
+    cb.checked = checked;
+    const id = parseInt(cb.dataset.id);
+    if(checked) selectedIds.add(id); else selectedIds.delete(id);
+    cb.closest('tr').classList.toggle('selected', checked);
+  });
+  updateBulkBar();
+}
+
+function toggleRowSelect(cb){
+  const id = parseInt(cb.dataset.id);
+  if(cb.checked) selectedIds.add(id); else selectedIds.delete(id);
+  cb.closest('tr').classList.toggle('selected', cb.checked);
+  document.getElementById('selectAll').checked = document.querySelectorAll('.row-chk:checked').length === document.querySelectorAll('.row-chk').length;
+  updateBulkBar();
+}
+
+function updateBulkBar(){
+  const bar = document.getElementById('bulkBar');
+  if(selectedIds.size > 0){
+    bar.classList.add('show');
+    document.getElementById('bulkCount').textContent = selectedIds.size + '件選択';
+  } else {
+    bar.classList.remove('show');
+  }
+}
+
+function clearSelection(){
+  selectedIds.clear();
+  document.querySelectorAll('.row-chk').forEach(cb=>{cb.checked=false;cb.closest('tr').classList.remove('selected');});
+  document.getElementById('selectAll').checked = false;
+  updateBulkBar();
+}
+
+async function bulkDelete(){
+  if(!confirm(`${selectedIds.size}件の測定を削除しますか？\nこの操作は元に戻せません。`)) return;
+  const ids = [...selectedIds];
+  const{error} = await sb.from('iroca_measurements').delete().in('id', ids);
+  if(error){ toast('❌ 削除エラー', true); console.error(error); return; }
+  toast(`🗑️ ${ids.length}件を削除しました`);
+  selectedIds.clear();
+  updateBulkBar();
+  loadData();
+}
+
+// === Detail Modal ===
+function openDetail(id){
+  const d = tableData.find(r => r.id === id);
+  if(!d) return;
+  
+  document.getElementById('detailColor').style.background = d.hex_color || '#333';
+  document.getElementById('detailName').textContent = d.sample_name + ' (#' + d.meas_index + ')';
+  
+  // Contrast color for label
+  const lum = (d.lab_l || 0);
+  document.getElementById('detailName').style.color = lum > 50 ? '#000' : '#fff';
+  
+  document.getElementById('detailGrid').innerHTML = `
+    <div class="modal-item"><div class="lbl">L* (明度)</div><div class="val">${d.lab_l?.toFixed(4) ?? '—'}</div></div>
+    <div class="modal-item"><div class="lbl">a* (赤↔緑)</div><div class="val">${d.lab_a?.toFixed(4) ?? '—'}</div></div>
+    <div class="modal-item"><div class="lbl">b* (黄↔青)</div><div class="val">${d.lab_b?.toFixed(4) ?? '—'}</div></div>
+    <div class="modal-item"><div class="lbl">ΔE(M0-M1)</div><div class="val" style="color:${(d.delta_e_m0m1||0)>0.3?'var(--yellow)':'var(--green)'}">${d.delta_e_m0m1?.toFixed(4) ?? '—'}</div></div>
+    <div class="modal-item"><div class="lbl">sRGB</div><div class="val">(${d.srgb_r}, ${d.srgb_g}, ${d.srgb_b})</div></div>
+    <div class="modal-item"><div class="lbl">HEX</div><div class="val">${d.hex_color || '—'}</div></div>
+    <div class="modal-item"><div class="lbl">デバイスSerial</div><div class="val" style="font-size:12px">${d.device_serial || '—'}</div></div>
+    <div class="modal-item"><div class="lbl">測定日時</div><div class="val" style="font-size:12px">${new Date(d.created_at).toLocaleString('ja-JP')}</div></div>
+  `;
+  
+  // Spectrum mini display
+  if(d.m0_spectrum && d.m0_spectrum.length === 36){
+    const maxR = Math.max(...d.m0_spectrum);
+    const bars = d.m0_spectrum.map((v,i)=>{
+      const pct = (v / Math.max(maxR, 0.01)) * 100;
+      const wl = 380 + i*10;
+      const hue = Math.max(0, Math.min(270, (wl - 380) / (730 - 380) * 270));
+      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:1px" title="${wl}nm: ${v.toFixed(4)}">
+        <div style="width:100%;height:${pct}%;min-height:1px;background:hsl(${270-hue},80%,55%);border-radius:2px 2px 0 0"></div>
+      </div>`;
+    }).join('');
+    document.getElementById('detailSpectrum').innerHTML = `
+      <div style="margin-top:12px">
+        <div class="lbl" style="font-size:10px;color:var(--sub);margin-bottom:4px">M0 反射スペクトル (380-730nm)</div>
+        <div style="display:flex;align-items:flex-end;height:80px;background:var(--bg);border-radius:8px;padding:4px;gap:1px">${bars}</div>
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--sub);margin-top:2px"><span>380nm</span><span>550nm</span><span>730nm</span></div>
+      </div>`;
+  } else {
+    document.getElementById('detailSpectrum').innerHTML = '';
+  }
+  
+  // Action buttons
+  document.getElementById('detailActions').innerHTML = `
+    <button class="btn btn-secondary btn-sm" onclick="downloadXml(${d.id})">📥 CxF3 XMLダウンロード</button>
+    <button class="btn btn-secondary btn-sm" onclick="downloadJson(${d.id})">📥 JSONダウンロード</button>
+    <button class="btn btn-secondary btn-sm" onclick="copyLab(${d.id})">📋 Lab値コピー</button>
+    <button class="btn btn-sm" style="background:var(--accent);color:#fff" onclick="if(confirm('この測定を削除しますか？')){deleteMeasFromModal(${d.id})}">🗑 削除</button>
+  `;
+  
+  document.getElementById('detailModal').classList.add('open');
+}
+
+function closeDetail(){
+  document.getElementById('detailModal').classList.remove('open');
+}
+
+function downloadXml(id){
+  const d = tableData.find(r => r.id === id);
+  if(!d || !d.raw_xml) { toast('XMLデータがありません', true); return; }
+  const blob = new Blob([d.raw_xml], {type:'application/xml'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = d.sample_name + '_' + d.meas_index + '.cxf';
+  a.click();
+  toast('📥 XMLをダウンロードしました');
+}
+
+function downloadJson(id){
+  const d = tableData.find(r => r.id === id);
+  if(!d) return;
+  const obj = {sample_name:d.sample_name, meas_index:d.meas_index, lab:{L:d.lab_l,a:d.lab_a,b:d.lab_b}, srgb:{r:d.srgb_r,g:d.srgb_g,b:d.srgb_b}, hex:d.hex_color, delta_e_m0m1:d.delta_e_m0m1, m0_spectrum:d.m0_spectrum, m1_spectrum:d.m1_spectrum, m2_spectrum:d.m2_spectrum, device:d.device_serial, date:d.created_at};
+  const blob = new Blob([JSON.stringify(obj, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = d.sample_name + '_' + d.meas_index + '.json';
+  a.click();
+  toast('📥 JSONをダウンロードしました');
+}
+
+function copyLab(id){
+  const d = tableData.find(r => r.id === id);
+  if(!d) return;
+  const text = `${d.sample_name}\tL*=${d.lab_l?.toFixed(4)}\ta*=${d.lab_a?.toFixed(4)}\tb*=${d.lab_b?.toFixed(4)}\t${d.hex_color}`;
+  navigator.clipboard.writeText(text).then(()=>toast('📋 コピーしました')).catch(()=>toast('コピー失敗',true));
+}
+
+async function deleteMeasFromModal(id){
+  await sb.from('iroca_measurements').delete().eq('id', id);
+  closeDetail();
+  toast('🗑️ 削除しました');
   loadData();
 }
 
@@ -464,6 +647,12 @@ async function loadData(){
   
   const{data,error}=await query;
   if(error){console.error(error);return;}
+  tableData = data || [];
+  
+  // Reset selection
+  selectedIds.clear();
+  updateBulkBar();
+  document.getElementById('selectAll').checked = false;
   
   // Stats
   const unique=new Set(data.map(d=>d.sample_name));
@@ -475,16 +664,16 @@ async function loadData(){
   
   const tbody=document.getElementById('dataBody');
   tbody.innerHTML=data.map(d=>`<tr>
+    <td onclick="event.stopPropagation()"><input type="checkbox" class="chk row-chk" data-id="${d.id}" onchange="toggleRowSelect(this)"></td>
     <td><span class="swatch-sm" style="background:${d.hex_color||'#333'}"></span></td>
-    <td style="font-weight:600">${d.sample_name}</td>
+    <td style="font-weight:600;cursor:pointer" onclick="openDetail(${d.id})">${d.sample_name}</td>
     <td>${d.meas_index}</td>
     <td>${d.lab_l?.toFixed(2)||'—'}</td>
     <td>${d.lab_a?.toFixed(2)||'—'}</td>
     <td>${d.lab_b?.toFixed(2)||'—'}</td>
     <td style="font-size:10px">${d.srgb_r},${d.srgb_g},${d.srgb_b}</td>
     <td style="color:${d.delta_e_m0m1>0.3?'var(--yellow)':'var(--green)'}">${d.delta_e_m0m1?.toFixed(3)||'—'}</td>
-    <td style="font-size:10px;color:var(--sub)">${new Date(d.created_at).toLocaleString('ja-JP')}</td>
-    <td><button class="btn btn-secondary btn-sm" onclick="deleteMeas(${d.id})">✕</button></td>
+    <td style="font-size:10px;color:var(--sub);cursor:pointer" onclick="openDetail(${d.id})">${new Date(d.created_at).toLocaleString('ja-JP')}</td>
   </tr>`).join('');
 }
 
@@ -637,6 +826,7 @@ async function init(){
   }
 }
 init();
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeDetail(); });
 </script>
 </body>
 </html>
