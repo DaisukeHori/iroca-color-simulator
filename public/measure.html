@@ -108,6 +108,19 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .modal-item .lbl{font-size:10px;color:var(--sub);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
 .modal-item .val{font-size:16px;font-weight:700}
 .modal-actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+
+/* Anomaly */
+.row-warn{background:rgba(234,179,8,0.06)}
+.row-error{background:rgba(196,32,52,0.08)}
+.badge-count{display:inline-block;background:var(--border);color:var(--text);font-size:10px;padding:1px 6px;border-radius:8px;margin-left:4px}
+.badge-ok{background:rgba(34,197,94,0.2);color:var(--green)}
+.badge-warn{background:rgba(234,179,8,0.2);color:var(--yellow)}
+.badge-error{background:rgba(196,32,52,0.2);color:var(--accent2)}
+.plan-meas-bar{display:inline-flex;gap:2px;margin-left:6px}
+.plan-dot{width:8px;height:8px;border-radius:50%;background:var(--border)}
+.plan-dot.filled{background:var(--green)}
+.plan-dot.warn{background:var(--yellow)}
+.plan-dot.error{background:var(--accent)}
 </style>
 </head>
 <body>
@@ -131,18 +144,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   <!-- UPLOAD PANEL -->
   <div class="panel active" id="panel-upload">
     <div class="form-row" style="margin-bottom:20px">
-      <label>測定番号:</label>
-      <select id="measIndex">
-        <option value="1">1回目</option><option value="2">2回目</option><option value="3">3回目</option>
-        <option value="4">4回目</option><option value="5">5回目</option>
-      </select>
       <label>メモ:</label>
-      <input type="text" id="uploadNotes" placeholder="任意のメモ">
+      <input type="text" id="uploadNotes" placeholder="任意のメモ（染色バッチ番号など）" style="flex:1">
     </div>
     <div class="drop-zone" id="dropZone">
       <h3>CxF3ファイルをドロップ</h3>
-      <p>i1Profiler CGATSカスタム (.txt) / CxFファイル (.cxf) — ファイル名がサンプル名になります</p>
-      <p style="margin-top:8px;font-size:11px;color:var(--accent)">複数ファイル同時対応</p>
+      <p>ファイル名 = サンプル名（例: A-01_N3_white100.txt）</p>
+      <p style="margin-top:4px;font-size:11px;color:var(--sub)">同じファイル名で何度でもアップロードOK → 自動で測定回数をカウント</p>
+      <p style="margin-top:4px;font-size:11px;color:var(--accent)">複数ファイル同時対応</p>
       <input type="file" id="fileInput" multiple accept=".txt,.cxf,.xml" style="display:none">
     </div>
     <div class="upload-preview" id="uploadPreview"></div>
@@ -203,7 +212,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     </div>
     <div class="table-wrap">
       <table class="data-table" id="planTable">
-        <thead><tr><th>No</th><th>ID</th><th>Phase</th><th>薬剤</th><th>比率</th><th>毛束</th><th>目的</th><th>状態</th></tr></thead>
+        <thead><tr><th>No</th><th>ID</th><th>Phase</th><th>薬剤</th><th>比率</th><th>毛束</th><th>目的</th><th>測定</th><th>状態</th></tr></thead>
         <tbody id="planBody"></tbody>
       </table>
     </div>
@@ -375,6 +384,13 @@ async function handleFiles(files){
       const parsed=parseCxF3(text,file.name);
       if(!parsed.m0){preview.innerHTML+='<p style="color:var(--accent)">⚠ '+file.name+': M0スペクトルが見つかりません</p>';continue;}
       parsed.rawXml=text;
+      
+      // Auto-detect next meas_index
+      const{data:existing}=await sb.from('iroca_measurements').select('meas_index').eq('sample_name',parsed.name).order('meas_index',{ascending:false}).limit(1);
+      const nextIdx = (existing && existing.length > 0) ? existing[0].meas_index + 1 : 1;
+      parsed.nextIdx = nextIdx;
+      const existCount = nextIdx - 1;
+      
       pendingFiles.push(parsed);
       
       const card=document.createElement('div');
@@ -382,9 +398,9 @@ async function handleFiles(files){
       card.innerHTML=`
         <div class="color-swatch" style="background:${parsed.hex}"></div>
         <div class="preview-info">
-          <h4>${parsed.name}</h4>
+          <h4>${parsed.name} <span class="badge-count">${nextIdx}回目</span>${existCount>0?` <span style="font-size:11px;color:var(--sub)">(既に${existCount}回測定済み)</span>`:' <span style="font-size:11px;color:var(--yellow)">新規</span>'}</h4>
           <p>L*=${parsed.lab.L.toFixed(1)} a*=${parsed.lab.a.toFixed(1)} b*=${parsed.lab.b.toFixed(1)} | sRGB(${parsed.srgb.r},${parsed.srgb.g},${parsed.srgb.b}) | ${parsed.hex}</p>
-          <p>${parsed.deltaE_m0m1!=null?'ΔE(M0-M1)='+parsed.deltaE_m0m1.toFixed(3):'M1なし'} | Serial: ${parsed.serial}</p>
+          <p>${parsed.deltaE_m0m1!=null?'ΔE(M0-M1)='+parsed.deltaE_m0m1.toFixed(3)+(parsed.deltaE_m0m1>0.3?' ⚠️蛍光':''):'M1なし'} | Serial: ${parsed.serial}</p>
         </div>
         <div class="preview-actions">
           <button class="btn btn-primary btn-sm" onclick="saveSingle(${pendingFiles.length-1}, this)">保存</button>
@@ -404,77 +420,114 @@ async function handleFiles(files){
   }
 }
 
+// === Save + Auto Median + Plan Update ===
 async function saveSingle(idx, btnEl){
   const p=pendingFiles[idx];
-  const mi=parseInt(document.getElementById('measIndex').value);
   const notes=document.getElementById('uploadNotes').value;
   
-  // ボタン状態: 保存中
   if(btnEl){btnEl.textContent='保存中...';btnEl.classList.add('saving');}
   
   const row={
     sample_name:p.name,
-    meas_index:mi,
-    m0_spectrum:p.m0,
-    m1_spectrum:p.m1,
-    m2_spectrum:p.m2,
-    lab_l:p.lab.L,
-    lab_a:p.lab.a,
-    lab_b:p.lab.b,
-    srgb_r:p.srgb.r,
-    srgb_g:p.srgb.g,
-    srgb_b:p.srgb.b,
+    meas_index:p.nextIdx,
+    m0_spectrum:p.m0, m1_spectrum:p.m1, m2_spectrum:p.m2,
+    lab_l:p.lab.L, lab_a:p.lab.a, lab_b:p.lab.b,
+    srgb_r:p.srgb.r, srgb_g:p.srgb.g, srgb_b:p.srgb.b,
     hex_color:p.hex,
     delta_e_m0m1:p.deltaE_m0m1||null,
-    device_serial:p.serial,
-    notes:notes,
-    raw_xml:p.rawXml
+    device_serial:p.serial, notes:notes, raw_xml:p.rawXml
   };
   
   const{error}=await sb.from('iroca_measurements').upsert(row,{onConflict:'sample_name,meas_index'});
   if(error){
     toast('❌ 保存エラー: '+error.message, true);
     if(btnEl){btnEl.textContent='保存';btnEl.classList.remove('saving');}
-    console.error(error);
-  } else {
-    toast(`✅ 保存しました\n${p.name} (${mi}回目)`);
-    if(btnEl){
-      btnEl.textContent='✅ 保存済';
-      btnEl.classList.remove('saving');
-      btnEl.classList.add('saved');
-      btnEl.closest('.preview-card')?.classList.add('saved');
-    }
+    return;
   }
+  
+  toast(`✅ 保存しました\n${p.name} (${p.nextIdx}回目)`);
+  if(btnEl){btnEl.textContent='✅ 保存済';btnEl.classList.remove('saving');btnEl.classList.add('saved');btnEl.closest('.preview-card')?.classList.add('saved');}
+  
+  // Auto-compute median and update plan status
+  await computeMedianAndUpdatePlan(p.name);
 }
 
 async function saveAll(btnEl){
-  const mi=parseInt(document.getElementById('measIndex').value);
   const notes=document.getElementById('uploadNotes').value;
   let ok=0,fail=0;
   
   if(btnEl){btnEl.textContent='保存中...';btnEl.classList.add('saving');}
   
+  const savedNames=new Set();
   for(const p of pendingFiles){
     const row={
-      sample_name:p.name,meas_index:mi,m0_spectrum:p.m0,m1_spectrum:p.m1,m2_spectrum:p.m2,
-      lab_l:p.lab.L,lab_a:p.lab.a,lab_b:p.lab.b,srgb_r:p.srgb.r,srgb_g:p.srgb.g,srgb_b:p.srgb.b,
-      hex_color:p.hex,delta_e_m0m1:p.deltaE_m0m1||null,device_serial:p.serial,notes,raw_xml:p.rawXml
+      sample_name:p.name,meas_index:p.nextIdx,
+      m0_spectrum:p.m0,m1_spectrum:p.m1,m2_spectrum:p.m2,
+      lab_l:p.lab.L,lab_a:p.lab.a,lab_b:p.lab.b,
+      srgb_r:p.srgb.r,srgb_g:p.srgb.g,srgb_b:p.srgb.b,
+      hex_color:p.hex,delta_e_m0m1:p.deltaE_m0m1||null,
+      device_serial:p.serial,notes,raw_xml:p.rawXml
     };
     const{error}=await sb.from('iroca_measurements').upsert(row,{onConflict:'sample_name,meas_index'});
-    if(error)fail++;else ok++;
+    if(error)fail++;else{ok++;savedNames.add(p.name);}
   }
   
   if(fail>0) toast(`⚠️ ${ok}件保存 / ${fail}件エラー`, true);
   else toast(`✅ ${ok}件すべて保存しました`);
   
-  if(btnEl){
-    btnEl.textContent=`✅ ${ok}件保存済`;
-    btnEl.classList.remove('saving');
-    btnEl.classList.add('saved');
-  }
-  // カードも全て保存済み表示に
+  if(btnEl){btnEl.textContent=`✅ ${ok}件保存済`;btnEl.classList.remove('saving');btnEl.classList.add('saved');}
   document.querySelectorAll('.preview-card').forEach(c=>c.classList.add('saved'));
   document.querySelectorAll('.preview-card .btn-primary').forEach(b=>{b.textContent='✅ 保存済';b.classList.add('saved');});
+  
+  // Auto-compute median for each unique sample
+  for(const name of savedNames) await computeMedianAndUpdatePlan(name);
+}
+
+// === Median Computation & Plan Status ===
+async function computeMedianAndUpdatePlan(sampleName){
+  // Fetch all measurements for this sample
+  const{data}=await sb.from('iroca_measurements').select('m0_spectrum,lab_l,lab_a,lab_b').eq('sample_name',sampleName).order('meas_index');
+  if(!data||data.length===0)return;
+  
+  const n=data.length;
+  
+  // Compute wavelength-by-wavelength median spectrum
+  const medSpec=[];
+  for(let w=0;w<36;w++){
+    const vals=data.filter(d=>d.m0_spectrum&&d.m0_spectrum.length>w).map(d=>d.m0_spectrum[w]).sort((a,b)=>a-b);
+    medSpec.push(vals.length>0 ? vals[Math.floor(vals.length/2)] : 0);
+  }
+  
+  // Compute median Lab
+  const medL=median(data.map(d=>d.lab_l).filter(v=>v!=null));
+  const medA=median(data.map(d=>d.lab_a).filter(v=>v!=null));
+  const medB=median(data.map(d=>d.lab_b).filter(v=>v!=null));
+  const rgb=labToSrgb(medL,medA,medB);
+  const hex=`#${rgb.r.toString(16).padStart(2,'0')}${rgb.g.toString(16).padStart(2,'0')}${rgb.b.toString(16).padStart(2,'0')}`;
+  
+  // Upsert into summary
+  await sb.from('iroca_sample_summary').upsert({
+    sample_name:sampleName, median_spectrum:medSpec,
+    median_lab_l:medL, median_lab_a:medA, median_lab_b:medB,
+    srgb_r:rgb.r, srgb_g:rgb.g, srgb_b:rgb.b, hex_color:hex,
+    measurement_count:n, updated_at:new Date().toISOString()
+  },{onConflict:'sample_name'});
+  
+  // Update experiment plan status if this sample matches a plan entry
+  // Match by checking if any plan drug matches the sample_name
+  const{data:plans}=await sb.from('iroca_experiment_plan').select('id').ilike('id','%');
+  // Simple approach: update any plan entry whose ID is a prefix of the sample_name
+  // e.g. sample_name="A-01_N3_white100" → plan id="A-01"
+  const planId=sampleName.split('_')[0]; // e.g. "A-01"
+  if(planId){
+    await sb.from('iroca_experiment_plan').update({status:'measured'}).eq('id',planId);
+  }
+}
+
+function median(arr){
+  if(!arr.length)return 0;
+  const s=[...arr].sort((a,b)=>a-b);
+  return s[Math.floor(s.length/2)];
 }
 
 // === Data Table ===
@@ -649,24 +702,67 @@ async function loadData(){
   if(error){console.error(error);return;}
   tableData = data || [];
   
-  // Reset selection
   selectedIds.clear();
   updateBulkBar();
   document.getElementById('selectAll').checked = false;
   
-  // Stats
-  const unique=new Set(data.map(d=>d.sample_name));
+  // Correct progress: count only samples matching experiment plan IDs
+  const{data:planData}=await sb.from('iroca_experiment_plan').select('id');
+  const planIds=new Set((planData||[]).map(p=>p.id));
+  const uniqueSamples=new Set(data.map(d=>d.sample_name));
+  // Match: sample_name starts with a plan ID (e.g. "A-01_xxx" → "A-01")
+  let matchedPlanCount=0;
+  const matchedPlanIds=new Set();
+  for(const sn of uniqueSamples){
+    const prefix=sn.split('_')[0];
+    if(planIds.has(prefix)&&!matchedPlanIds.has(prefix)){matchedPlanIds.add(prefix);matchedPlanCount++;}
+  }
+  
+  // Anomaly detection: group by sample, check intra-sample variance
+  const bySample={};
+  for(const d of data){
+    if(!bySample[d.sample_name])bySample[d.sample_name]=[];
+    bySample[d.sample_name].push(d);
+  }
+  const anomalyMap={};  // id → 'warn'|'error'|null
+  for(const[name,rows] of Object.entries(bySample)){
+    if(rows.length>=2){
+      const Ls=rows.filter(r=>r.lab_l!=null).map(r=>r.lab_l);
+      if(Ls.length>=2){
+        const mean=Ls.reduce((a,b)=>a+b)/Ls.length;
+        const sd=Math.sqrt(Ls.reduce((s,v)=>s+(v-mean)**2,0)/(Ls.length-1));
+        // Flag individual outliers (>2σ from mean)
+        for(const r of rows){
+          if(r.lab_l!=null && Math.abs(r.lab_l-mean)>2*sd && sd>0.5) anomalyMap[r.id]='error';
+        }
+      }
+    }
+    // Flag high ΔE(M0-M1) as warning
+    for(const r of rows){
+      if(r.delta_e_m0m1 && r.delta_e_m0m1 > 1.0) anomalyMap[r.id]=anomalyMap[r.id]||'error';
+      else if(r.delta_e_m0m1 && r.delta_e_m0m1 > 0.3 && !anomalyMap[r.id]) anomalyMap[r.id]='warn';
+    }
+  }
+  
+  const anomalyCount=Object.values(anomalyMap).filter(v=>v==='error').length;
+  const warnCount=Object.values(anomalyMap).filter(v=>v==='warn').length;
+  
   document.getElementById('statsRow').innerHTML=`
     <div class="stat-card"><div class="num">${data.length}</div><div class="label">総測定数</div></div>
-    <div class="stat-card"><div class="num">${unique.size}</div><div class="label">サンプル数</div></div>
-    <div class="stat-card"><div class="num">${unique.size}/170</div><div class="label">進捗</div></div>
-    <div class="stat-card"><div class="num">${data.filter(d=>d.delta_e_m0m1&&d.delta_e_m0m1>0.3).length}</div><div class="label">蛍光検出(ΔE>0.3)</div></div>`;
+    <div class="stat-card"><div class="num">${uniqueSamples.size}</div><div class="label">ユニークサンプル数</div></div>
+    <div class="stat-card"><div class="num">${matchedPlanCount}/170</div><div class="label">計画進捗（実験計画と一致）</div></div>
+    <div class="stat-card"><div class="num" style="color:${anomalyCount>0?'var(--accent)':warnCount>0?'var(--yellow)':'var(--green)'}">${anomalyCount>0?'🔴 '+anomalyCount:warnCount>0?'⚠️ '+warnCount:'✅ 0'}</div><div class="label">異常値・要確認</div></div>`;
   
   const tbody=document.getElementById('dataBody');
-  tbody.innerHTML=data.map(d=>`<tr>
+  tbody.innerHTML=data.map(d=>{
+    const flag=anomalyMap[d.id];
+    const rowClass=flag==='error'?'row-error':flag==='warn'?'row-warn':'';
+    const flagIcon=flag==='error'?'🔴':flag==='warn'?'⚠️':'';
+    const measCount=bySample[d.sample_name]?.length||0;
+    return `<tr class="${rowClass}">
     <td onclick="event.stopPropagation()"><input type="checkbox" class="chk row-chk" data-id="${d.id}" onchange="toggleRowSelect(this)"></td>
     <td><span class="swatch-sm" style="background:${d.hex_color||'#333'}"></span></td>
-    <td style="font-weight:600;cursor:pointer" onclick="openDetail(${d.id})">${d.sample_name}</td>
+    <td style="font-weight:600;cursor:pointer" onclick="openDetail(${d.id})">${d.sample_name} ${flagIcon}<span class="badge-count">${measCount}回</span></td>
     <td>${d.meas_index}</td>
     <td>${d.lab_l?.toFixed(2)||'—'}</td>
     <td>${d.lab_a?.toFixed(2)||'—'}</td>
@@ -674,7 +770,7 @@ async function loadData(){
     <td style="font-size:10px">${d.srgb_r},${d.srgb_g},${d.srgb_b}</td>
     <td style="color:${d.delta_e_m0m1>0.3?'var(--yellow)':'var(--green)'}">${d.delta_e_m0m1?.toFixed(3)||'—'}</td>
     <td style="font-size:10px;color:var(--sub);cursor:pointer" onclick="openDetail(${d.id})">${new Date(d.created_at).toLocaleString('ja-JP')}</td>
-  </tr>`).join('');
+  </tr>`;}).join('');
 }
 
 async function deleteMeas(id){
@@ -760,17 +856,66 @@ async function loadPlan(){
   let query=sb.from('iroca_experiment_plan').select('*').order('seq_no');
   if(phase)query=query.eq('phase',phase);
   
-  const{data,error}=await query;
-  if(error||!data){document.getElementById('planBody').innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--sub)">実験計画が未登録です。CSVインポートで登録してください。</td></tr>';return;}
+  const{data:planData,error}=await query;
+  if(error||!planData){document.getElementById('planBody').innerHTML='<tr><td colspan="9">実験計画が未登録です</td></tr>';return;}
   
-  const measured=data.filter(d=>d.status==='measured').length;
-  document.getElementById('planProgress').textContent=`進捗: ${measured}/${data.length} (${(measured/data.length*100).toFixed(0)}%)`;
+  // Fetch all measurements to count per plan sample
+  const{data:allMeas}=await sb.from('iroca_measurements').select('sample_name,meas_index,delta_e_m0m1,lab_l');
+  const measByPlan={};  // planId → [{...}]
+  if(allMeas){
+    for(const m of allMeas){
+      const prefix=m.sample_name.split('_')[0];
+      if(!measByPlan[prefix])measByPlan[prefix]=[];
+      measByPlan[prefix].push(m);
+    }
+  }
   
-  document.getElementById('planBody').innerHTML=data.map(d=>`<tr>
-    <td>${d.seq_no}</td><td style="font-weight:600">${d.id}</td><td>${d.phase}</td>
-    <td>${d.drug}</td><td>${d.ratio||'—'}</td><td>${d.hair_type}</td><td style="font-size:11px">${d.purpose||''}</td>
-    <td class="status-${d.status}">${d.status==='measured'?'✅ 測定済':d.status==='analyzed'?'📊 分析済':'⏳ 未測定'}</td>
-  </tr>`).join('');
+  let measuredCount=0, anomalyCount=0;
+  
+  const rows=planData.map(d=>{
+    const meas=measByPlan[d.id]||[];
+    const count=meas.length;
+    if(count>0)measuredCount++;
+    
+    // Anomaly check for this plan sample
+    let hasAnomaly=false, hasWarn=false;
+    for(const m of meas){
+      if(m.delta_e_m0m1 && m.delta_e_m0m1 > 1.0) hasAnomaly=true;
+      else if(m.delta_e_m0m1 && m.delta_e_m0m1 > 0.3) hasWarn=true;
+    }
+    // Intra-sample variance check
+    if(count>=2){
+      const Ls=meas.filter(m=>m.lab_l!=null).map(m=>m.lab_l);
+      if(Ls.length>=2){
+        const mean=Ls.reduce((a,b)=>a+b)/Ls.length;
+        const sd=Math.sqrt(Ls.reduce((s,v)=>s+(v-mean)**2,0)/(Ls.length-1));
+        if(sd>2.0) hasAnomaly=true;
+        else if(sd>1.0) hasWarn=true;
+      }
+    }
+    if(hasAnomaly) anomalyCount++;
+    
+    // Measurement dots (up to 5)
+    let dots='';
+    for(let i=1;i<=5;i++){
+      const m=meas.find(x=>x.meas_index===i);
+      const cls=m?(m.delta_e_m0m1>1.0?'error':m.delta_e_m0m1>0.3?'warn':'filled'):'';
+      dots+=`<span class="plan-dot ${cls}" title="${m?'測定'+i+'回目':'未測定'}"></span>`;
+    }
+    
+    const statusText=hasAnomaly?'🔴 要再測定':hasWarn?'⚠️ 要確認':count>=5?'✅ 完了(5回)':count>0?`📊 ${count}回測定`:'⏳ 未測定';
+    const statusClass=hasAnomaly?'status-pending':count>0?'status-measured':'status-pending';
+    
+    return `<tr style="${hasAnomaly?'background:rgba(196,32,52,0.06)':hasWarn?'background:rgba(234,179,8,0.04)':''}">
+      <td>${d.seq_no}</td><td style="font-weight:600">${d.id}</td><td>${d.phase}</td>
+      <td>${d.drug}</td><td>${d.ratio||'—'}</td><td>${d.hair_type}</td><td style="font-size:11px">${d.purpose||''}</td>
+      <td><span class="plan-meas-bar">${dots}</span></td>
+      <td class="${statusClass}">${statusText}</td>
+    </tr>`;
+  }).join('');
+  
+  document.getElementById('planProgress').innerHTML=`進捗: <strong>${measuredCount}/${planData.length}</strong> (${(measuredCount/planData.length*100).toFixed(0)}%)${anomalyCount>0?` | <span style="color:var(--accent)">🔴 ${anomalyCount}件 要再測定</span>`:''}`;
+  document.getElementById('planBody').innerHTML=rows;
 }
 
 // === Export ===
