@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IROCA カラー調合マニュアル — 測色実験用</title>
+<style>
+  :root {
+    --primary: #1a1a2e;
+    --accent: #e94560;
+    --bg: #f8f9fa;
+    --card: #ffffff;
+    --text: #2d3436;
+    --muted: #636e72;
+    --border: #dfe6e9;
+    --step-bg: #0a3d62;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.7;
+  }
+  .header {
+    background: linear-gradient(135deg, #16213e 0%, #0f3460 100%);
+    color: white; padding: 40px 20px; text-align: center;
+  }
+  .header h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: 8px; }
+  .header .subtitle { font-size: 0.95rem; opacity: 0.8; }
+  .header .version {
+    display: inline-block; margin-top: 12px;
+    background: var(--accent); color: white;
+    padding: 4px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;
+  }
+  .toc {
+    max-width: 800px; margin: -20px auto 30px;
+    background: var(--card); border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    padding: 24px 30px; position: relative; z-index: 1;
+  }
+  .toc h2 { font-size: 1rem; color: var(--muted); margin-bottom: 12px; letter-spacing: 0.05em; }
+  .toc-list { display: flex; flex-direction: column; gap: 6px; }
+  .toc a {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px; background: var(--bg); border-radius: 8px;
+    text-decoration: none; color: var(--text); font-size: 0.95rem; font-weight: 500;
+    transition: all 0.2s;
+  }
+  .toc a:hover { background: #e8f0fe; color: #1967d2; }
+  .toc a .num {
+    display: inline-flex; width: 32px; height: 32px;
+    align-items: center; justify-content: center;
+    background: var(--step-bg); color: white; border-radius: 50%;
+    font-size: 0.8rem; font-weight: 700; flex-shrink: 0;
+  }
+  .toc a .arrow { margin-left: auto; color: var(--muted); font-size: 0.8rem; }
+  .content { max-width: 800px; margin: 0 auto; padding: 0 20px 60px; }
+  .section { margin-bottom: 50px; }
+  .section-title {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 24px; padding-bottom: 12px;
+    border-bottom: 3px solid var(--accent);
+  }
+  .section-title .icon {
+    width: 44px; height: 44px; background: var(--accent); color: white;
+    border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; flex-shrink: 0;
+  }
+  .section-title h2 { font-size: 1.3rem; }
+  .step {
+    background: var(--card); border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+    margin-bottom: 20px; overflow: hidden;
+  }
+  .step-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 20px; background: var(--step-bg); color: white;
+  }
+  .step-num {
+    width: 36px; height: 36px; line-height: 36px; text-align: center;
+    background: var(--accent); border-radius: 50%;
+    font-weight: 800; font-size: 1rem; flex-shrink: 0;
+  }
+  .step-header h3 { font-size: 1.05rem; font-weight: 600; }
+  .step-body { padding: 20px; }
+  .step-body p { margin-bottom: 12px; color: var(--text); font-size: 0.95rem; }
+  .box { padding: 14px 18px; border-radius: 8px; margin: 14px 0; font-size: 0.9rem; }
+  .box-warn { background: #fff3cd; border-left: 4px solid #ffc107; color: #856404; }
+  .box-tip { background: #d1ecf1; border-left: 4px solid #17a2b8; color: #0c5460; }
+  .box-danger { background: #f8d7da; border-left: 4px solid #dc3545; color: #721c24; }
+  .box-success { background: #d4edda; border-left: 4px solid #28a745; color: #155724; }
+  .ratio-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin: 12px 0; }
+  .ratio-table th, .ratio-table td { padding: 8px 12px; border: 1px solid var(--border); }
+  .ratio-table th { background: #f1f1f1; text-align: left; font-weight: 600; }
+  .ratio-table td { text-align: center; }
+  .ratio-table .highlight { background: #fff3cd; font-weight: 600; }
+  .footer {
+    text-align: center; padding: 30px; color: var(--muted); font-size: 0.8rem;
+    border-top: 1px solid var(--border); max-width: 800px; margin: 0 auto;
+  }
+  .footer a { color: var(--accent); text-decoration: none; }
+  @media print {
+    .step { break-inside: avoid; box-shadow: none; border: 1px solid #ddd; }
+  }
+  @media (max-width: 600px) {
+    .header h1 { font-size: 1.3rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>IROCA カラー調合マニュアル</h1>
+  <div class="subtitle">測色実験用 — 毛束へのカラー剤 調合・塗布・放置・洗浄の手順</div>
+  <div class="version">v1.0 — 2026年4月</div>
+</div>
+
+<nav class="toc">
+  <h2>手順の流れ</h2>
+  <div class="toc-list">
+    <a href="#sec-prep"><span class="num">1</span>毛束の準備<span class="arrow">→</span></a>
+    <a href="#sec-mix"><span class="num">2</span>カラー調合<span class="arrow">→</span></a>
+    <a href="#sec-apply"><span class="num">3</span>カラー塗布<span class="arrow">→</span></a>
+    <a href="#sec-wait"><span class="num">4</span>放置<span class="arrow">→</span></a>
+    <a href="#sec-check"><span class="num">5</span>カラーチェック<span class="arrow">→</span></a>
+    <a href="#sec-wash"><span class="num">6</span>乳化・シャンプー<span class="arrow">→</span></a>
+    <a href="#sec-dry"><span class="num">7</span>乾燥<span class="arrow">✓</span></a>
+  </div>
+</nav>
+
+<div class="content">
+
+  <!-- ======== 概要 ======== -->
+  <section class="section">
+    <div class="box box-tip">
+      💡 <strong>このマニュアルについて</strong><br>
+      サロンでの施術手順（良草カラー手順表 全13工程）から、<strong>前処理材（レディアント・B-GEL・エフェクト・ヴァリアス）</strong>と<strong>サロン仕上げ（オゾンクーリング・ラスター等）</strong>を除き、測色実験の毛束作成に必要な工程のみを抽出しています。
+    </div>
+  </section>
+
+  <!-- ======== 1: 毛束の準備 ======== -->
+  <section class="section" id="sec-prep">
+    <div class="section-title">
+      <div class="icon">1</div>
+      <h2>毛束の準備</h2>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><div class="step-num">1</div><h3>毛束をウェットにする</h3></div>
+      <div class="step-body">
+        <p>毛束を水で十分にウェットにします。</p>
+        <div class="box box-warn">
+          ⚠️ <strong>実験計画で指定された毛束を使用すること</strong><br>
+          白髪100% / 黒髪100% / 白髪50% / 白髪30% など、計画書の指示に従って毛束を選びます。
+        </div>
+        <p>同じ調合で複数の白髪率の毛束に塗る場合は、<strong>全ての毛束をまとめて準備</strong>してください。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== 2: カラー調合 ======== -->
+  <section class="section" id="sec-mix">
+    <div class="section-title">
+      <div class="icon">2</div>
+      <h2>カラー調合</h2>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><div class="step-num">2</div><h3>薬剤とオキシを混合</h3></div>
+      <div class="step-body">
+        <p>実験計画に従い、指定された薬剤を正確に計量して混合します。</p>
+
+        <div class="box box-danger">
+          ❌ <strong>混合比率（固定）</strong><br>
+          <strong>薬剤 1 ： オキシ5% 2</strong>（薬剤が1に対してオキシが2）<br>
+          この比率は全てのレシピで共通です。
+        </div>
+
+        <p><strong>混合手順:</strong></p>
+        <ol style="margin:0 0 12px 20px; font-size:0.93rem; color:#555; line-height:2;">
+          <li>カップに薬剤を計量して入れる</li>
+          <li>オキシ5%を薬剤の<strong>2倍量</strong>加える</li>
+          <li>粘度が出るまでしっかり混ぜる</li>
+          <li><strong>テリ（光沢）が出るまで</strong>さらに混ぜて全体を均一にする</li>
+        </ol>
+
+        <div class="box box-tip">
+          💡 <strong>複数薬剤の混合例</strong><br>
+          例: N3+Y5 (3:1) の場合<br>
+          → N3を3g + Y5を1g = 薬剤合計4g<br>
+          → オキシ5%を8g（薬剤の2倍）<br>
+          → 合計12g
+        </div>
+
+        <div class="box box-warn">
+          ⚠️ <strong>同じ調合で複数毛束に塗る場合</strong><br>
+          必要な量をまとめて1回で調合してください。毛束ごとに別々に作ると比率のブレが出ます。
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><div class="step-num">!</div><h3>FASHION COLOR 表の調合早見</h3></div>
+      <div class="step-body">
+        <p>FC表のレシピは以下の通りです（Lv3〜Lv10）。</p>
+        <table class="ratio-table">
+          <thead>
+            <tr><th>Lv</th><th>イエロー系</th><th>レッド系</th><th>ブルー/アッシュ系</th><th>マット系</th><th>ブラウン系</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>3</td><td>N3+Y5 (3:1)</td><td>N3+R (3:1)</td><td>N3+B (3:1)</td><td>N3+Y5 (3:1)</td><td>N3+R (4:1)</td></tr>
+            <tr><td>4</td><td>N3+R5 (1:1)</td><td>N3+R5 (1:2)</td><td>N3+N5+B (1:2:0.5)</td><td>N3+Y5+B (1:2:1)</td><td>N3+R5 (1:2)</td></tr>
+            <tr><td>5</td><td class="highlight">Y5 単品</td><td class="highlight">R5 単品</td><td>N5+B (4:1)</td><td>Y5+B (2:1)</td><td>R5+Y5 (1:2)</td></tr>
+            <tr><td>6</td><td>Y5+Y7 (1:2)</td><td>R5+R7 (1:2)</td><td>N5+N7+B (1:2:1)</td><td>Y5+Y7+B (1:2:1)</td><td>Y5+R7 (1:1)</td></tr>
+            <tr><td>7</td><td class="highlight">Y7 単品</td><td class="highlight">R7 単品</td><td>N7+B (4:1)</td><td>Y7+B (3:1)</td><td>R7+Y7 (1:2)</td></tr>
+            <tr><td>8</td><td>R7+Y9 (1:2)</td><td>R7+R9 (1:2)</td><td>N7+N9+B (1:2:0.5)</td><td>Y7+Y9+B (1:2:0.5)</td><td>R7+R9+Y9 (2:1:1)</td></tr>
+            <tr><td>9</td><td class="highlight">Y9 単品</td><td class="highlight">R9 単品</td><td>N9+B (4:0.5)</td><td>Y9+B (3:0.5)</td><td>R9+Y9 (1:2)</td></tr>
+            <tr><td>10</td><td>Y9+L (2:1)</td><td>R9+Racc+L (1:1:1)</td><td>N9+B+L (2:0.5:2)</td><td>Y9+B+L (2:0.5:1)</td><td>R9+Y9+L (1:1:1)</td></tr>
+          </tbody>
+        </table>
+        <p style="font-size:0.85rem; color:var(--muted);">R = Racc（レッドアクセント）、B = ブルー、L = ライトナー。黄色背景は単品。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== 3: カラー塗布 ======== -->
+  <section class="section" id="sec-apply">
+    <div class="section-title">
+      <div class="icon">3</div>
+      <h2>カラー塗布</h2>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><div class="step-num">3</div><h3>毛束にカラー剤を塗布</h3></div>
+      <div class="step-body">
+        <p>ウェットのままの毛束にカラー剤をハケで塗布します。</p>
+        <ul style="margin:0 0 12px 20px; font-size:0.93rem; color:#555; line-height:2;">
+          <li>毛束全体にムラなく、たっぷりと塗布する</li>
+          <li>根元から毛先まで均一に</li>
+          <li>同じ調合の毛束は<strong>続けて塗布</strong>（白髪100%→黒髪100%→白髪50%…）</li>
+        </ul>
+        <div class="box box-warn">
+          ⚠️ 塗布は手早く行うこと。1人で10分以内が目安。時間がかかると最初に塗った毛束との放置時間差が出ます。
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== 4: 放置 ======== -->
+  <section class="section" id="sec-wait">
+    <div class="section-title">
+      <div class="icon">4</div>
+      <h2>放置</h2>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><div class="step-num">4</div><h3>20〜30分 自然放置</h3></div>
+      <div class="step-body">
+        <p>塗布後、以下の条件で放置します。</p>
+        <ul style="margin:0 0 12px 20px; font-size:0.93rem; color:#555; line-height:2;">
+          <li><strong>放置時間: 20〜30分</strong>（自然放置）</li>
+          <li>ラップで包み、乾燥を防止する</li>
+          <li>室温で放置（加温不要）</li>
+        </ul>
+        <div class="box box-tip">
+          💡 <strong>全サンプルで放置時間を統一してください。</strong>例えば25分に固定する等。QCログに放置時間を記録すること。
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== 5: カラーチェック ======== -->
+  <section class="section" id="sec-check">
+    <div class="section-title">
+      <div class="icon">5</div>
+      <h2>カラーチェック</h2>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><div class="step-num">5</div><h3>発色を確認</h3></div>
+      <div class="step-body">
+        <p>コームで薬剤を軽く取り、空気酸化の状態を確認します。</p>
+        <ul style="margin:0 0 12px 20px; font-size:0.93rem; color:#555; line-height:2;">
+          <li>毛束の数か所でチェック</li>
+          <li>グラデーション（根元と毛先の差）がなければOK</li>
+          <li>まだ明るさが足りない場合は追加5分放置</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== 6: 乳化・シャンプー ======== -->
+  <section class="section" id="sec-wash">
+    <div class="section-title">
+      <div class="icon">6</div>
+      <h2>乳化・シャンプー</h2>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><div class="step-num">6</div><h3>乳化してから洗い流す</h3></div>
+      <div class="step-body">
+        <p>カラーチェックOK後、以下の手順で洗い流します。</p>
+        <ol style="margin:0 0 12px 20px; font-size:0.93rem; color:#555; line-height:2;">
+          <li><strong>乳化</strong>: 少量のお湯を加え、カラー剤を乳化させる（色水が出るまで揉み込む）</li>
+          <li><strong>すすぎ</strong>: お湯でしっかり流す</li>
+          <li><strong>シャンプー</strong>: 1回シャンプーして残留薬剤を除去</li>
+          <li><strong>すすぎ</strong>: 泡が残らないよう十分にすすぐ</li>
+        </ol>
+        <div class="box box-danger">
+          ❌ 乳化を省略しないこと。乳化せずに直接シャンプーすると色ムラの原因になります。
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== 7: 乾燥 ======== -->
+  <section class="section" id="sec-dry">
+    <div class="section-title">
+      <div class="icon">7</div>
+      <h2>乾燥</h2>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><div class="step-num">7</div><h3>乾燥させて測定準備完了</h3></div>
+      <div class="step-body">
+        <ol style="margin:0 0 12px 20px; font-size:0.93rem; color:#555; line-height:2;">
+          <li><strong>タオルドライ</strong>: 水気を取る</li>
+          <li><strong>ドライヤー</strong>: 完全に乾かす</li>
+          <li><strong>室温で30分以上放置</strong>: 含水率を安定させる</li>
+        </ol>
+        <div class="box box-success">
+          ✅ 乾燥完了後、<a href="../manual/" style="color:#155724;font-weight:600;">測色マニュアル</a>に従ってi1Pro 2で測定してください。
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== 注意事項 ======== -->
+  <section class="section">
+    <div class="section-title">
+      <div class="icon">!</div>
+      <h2>注意事項</h2>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><div class="step-num">!</div><h3>計量と記録</h3></div>
+      <div class="step-body">
+        <ul style="margin:0 0 0 20px; font-size:0.93rem; color:#555; line-height:2;">
+          <li>薬剤は<strong>電子はかり（0.1g精度）</strong>で計量する</li>
+          <li>計量値・放置時間・室温をQCログに記録する</li>
+          <li>同一レシピで複数白髪率を同時に塗る場合、<strong>塗布順と時刻</strong>を記録する</li>
+          <li>オキシは必ず<strong>5%</strong>を使用（6%や3%は不可）</li>
+          <li>開封済みオキシは劣化するため、開封日を確認する</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><div class="step-num">!</div><h3>サロン手順との違い</h3></div>
+      <div class="step-body">
+        <p>測色実験では以下のサロン工程は<strong>省略</strong>します。</p>
+        <table class="ratio-table">
+          <thead><tr><th>サロン工程</th><th>理由</th></tr></thead>
+          <tbody>
+            <tr><td>レディアント R スプレー</td><td>前処理材。測定への影響を排除</td></tr>
+            <tr><td>B-GEL800</td><td>頭皮保護。毛束実験では不要</td></tr>
+            <tr><td>エフェクト E スプレー</td><td>前処理材。発色への影響を排除</td></tr>
+            <tr><td>ヴァリアス V</td><td>ダメージ保護。未処理毛束では不要</td></tr>
+            <tr><td>オプティマム O スプレー</td><td>後処理材。測色に影響する可能性</td></tr>
+            <tr><td>オゾンクーリング</td><td>設備依存。統制困難</td></tr>
+            <tr><td>仕上げ（ラスター・アイラ等）</td><td>コーティング剤。反射率に影響</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div class="footer">
+  <p>IROCA カラー調合マニュアル v1.0 — Revol Corporation</p>
+  <p>
+    <a href="../measure.html">← 測色データ管理</a> ｜
+    <a href="../manual/">測色マニュアル</a> ｜
+    <a href="../experiment-plan-v5.md">実験計画 v5.0</a> ｜
+    <a href="../index.html">シミュレーター</a>
+  </p>
+</div>
+
+</body>
+</html>
