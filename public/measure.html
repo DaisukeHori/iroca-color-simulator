@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IROCA 測色データ管理 — i1Pro 2</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+:root{--bg:#0f1117;--card:#1a1d27;--border:#2a2d3a;--text:#e4e4e7;--sub:#9ca3af;--accent:#C42034;--accent2:#e8364b;--green:#22c55e;--blue:#3b82f6;--yellow:#eab308;--font:'Segoe UI','Noto Sans JP',sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh}
+.header{background:linear-gradient(135deg,#1a1d27,#252836);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;gap:16px}
+.header h1{font-size:18px;font-weight:700;letter-spacing:0.5px}
+.header .badge{background:var(--accent);color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600}
+.tabs{display:flex;gap:0;background:var(--card);border-bottom:1px solid var(--border)}
+.tab{padding:12px 24px;cursor:pointer;font-size:13px;color:var(--sub);border-bottom:2px solid transparent;transition:all .2s}
+.tab:hover{color:var(--text);background:rgba(255,255,255,0.03)}
+.tab.active{color:var(--accent2);border-bottom-color:var(--accent)}
+.content{max-width:1400px;margin:0 auto;padding:20px}
+.panel{display:none}.panel.active{display:block}
+
+/* Upload */
+.drop-zone{border:2px dashed var(--border);border-radius:12px;padding:60px 40px;text-align:center;cursor:pointer;transition:all .3s;background:rgba(196,32,52,0.02)}
+.drop-zone:hover,.drop-zone.dragover{border-color:var(--accent);background:rgba(196,32,52,0.08)}
+.drop-zone h3{font-size:20px;margin-bottom:8px}
+.drop-zone p{color:var(--sub);font-size:13px}
+.upload-preview{margin-top:20px}
+.preview-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:12px;display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center}
+.color-swatch{width:48px;height:48px;border-radius:8px;border:1px solid var(--border)}
+.preview-info h4{font-size:14px;margin-bottom:4px}
+.preview-info p{font-size:12px;color:var(--sub)}
+.preview-actions{display:flex;gap:8px}
+
+/* Table */
+.data-table{width:100%;border-collapse:collapse;font-size:12px}
+.data-table th{background:var(--card);padding:10px 12px;text-align:left;font-weight:600;color:var(--sub);text-transform:uppercase;font-size:10px;letter-spacing:0.5px;position:sticky;top:0;border-bottom:1px solid var(--border)}
+.data-table td{padding:8px 12px;border-bottom:1px solid var(--border)}
+.data-table tr:hover{background:rgba(255,255,255,0.02)}
+.swatch-sm{width:24px;height:24px;border-radius:4px;display:inline-block;vertical-align:middle;border:1px solid var(--border)}
+
+/* Buttons */
+.btn{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;transition:all .2s}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent2)}
+.btn-secondary{background:var(--card);color:var(--text);border:1px solid var(--border)}.btn-secondary:hover{background:var(--border)}
+.btn-success{background:var(--green);color:#fff}
+.btn-sm{padding:4px 10px;font-size:11px}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}
+.stat-card .num{font-size:28px;font-weight:700}
+.stat-card .label{font-size:11px;color:var(--sub);margin-top:4px}
+
+/* Chart */
+.chart-container{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;margin-top:16px}
+.chart-container canvas{max-height:400px}
+
+/* Form */
+.form-row{display:flex;gap:12px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.form-row label{font-size:12px;color:var(--sub);min-width:80px}
+.form-row input,.form-row select{background:var(--card);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:4px;font-size:12px}
+.form-row input{flex:1}
+
+/* Status badges */
+.status-pending{color:var(--yellow);font-size:11px}
+.status-measured{color:var(--green);font-size:11px}
+.status-analyzed{color:var(--blue);font-size:11px}
+
+/* Toolbar */
+.toolbar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.toolbar .spacer{flex:1}
+
+/* Scrollable table */
+.table-wrap{max-height:70vh;overflow:auto;border:1px solid var(--border);border-radius:8px}
+
+/* Toast */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--green);color:#fff;padding:12px 20px;border-radius:8px;font-size:13px;display:none;z-index:999;animation:fadeIn .3s}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>IROCA 測色データ管理</h1>
+  <span class="badge">i1Pro 2 × Supabase</span>
+  <span style="flex:1"></span>
+  <span style="font-size:11px;color:var(--sub)" id="dbStatus">接続中...</span>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showPanel('upload')">📤 アップロード</div>
+  <div class="tab" onclick="showPanel('data')">📊 データ一覧</div>
+  <div class="tab" onclick="showPanel('analysis')">🔬 分析</div>
+  <div class="tab" onclick="showPanel('plan')">📋 実験計画</div>
+  <div class="tab" onclick="showPanel('export')">💾 エクスポート</div>
+</div>
+
+<div class="content">
+  <!-- UPLOAD PANEL -->
+  <div class="panel active" id="panel-upload">
+    <div class="form-row" style="margin-bottom:20px">
+      <label>測定番号:</label>
+      <select id="measIndex">
+        <option value="1">1回目</option><option value="2">2回目</option><option value="3">3回目</option>
+        <option value="4">4回目</option><option value="5">5回目</option>
+      </select>
+      <label>メモ:</label>
+      <input type="text" id="uploadNotes" placeholder="任意のメモ">
+    </div>
+    <div class="drop-zone" id="dropZone">
+      <h3>CxF3ファイルをドロップ</h3>
+      <p>i1Profiler CGATSカスタム (.txt) / CxFファイル (.cxf) — ファイル名がサンプル名になります</p>
+      <p style="margin-top:8px;font-size:11px;color:var(--accent)">複数ファイル同時対応</p>
+      <input type="file" id="fileInput" multiple accept=".txt,.cxf,.xml" style="display:none">
+    </div>
+    <div class="upload-preview" id="uploadPreview"></div>
+  </div>
+
+  <!-- DATA PANEL -->
+  <div class="panel" id="panel-data">
+    <div class="stats" id="statsRow"></div>
+    <div class="toolbar">
+      <select id="filterPhase" onchange="loadData()"><option value="">全Phase</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option></select>
+      <input type="text" id="filterName" placeholder="サンプル名で検索..." oninput="loadData()" style="background:var(--card);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:4px;font-size:12px;width:200px">
+      <span class="spacer"></span>
+      <button class="btn btn-secondary btn-sm" onclick="loadData()">🔄 更新</button>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table" id="dataTable">
+        <thead><tr>
+          <th>色</th><th>サンプル名</th><th>回</th><th>L*</th><th>a*</th><th>b*</th><th>sRGB</th><th>ΔE(M0-M1)</th><th>日時</th><th></th>
+        </tr></thead>
+        <tbody id="dataBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ANALYSIS PANEL -->
+  <div class="panel" id="panel-analysis">
+    <div class="form-row">
+      <label>サンプル選択:</label>
+      <select id="analysisSample" onchange="loadAnalysis()" style="width:300px"></select>
+      <button class="btn btn-secondary btn-sm" onclick="loadSampleList()">更新</button>
+    </div>
+    <div class="chart-container">
+      <canvas id="specChart"></canvas>
+    </div>
+    <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:16px" id="analysisDetail"></div>
+  </div>
+
+  <!-- PLAN PANEL -->
+  <div class="panel" id="panel-plan">
+    <div class="toolbar">
+      <select id="planPhase" onchange="loadPlan()"><option value="">全Phase</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option></select>
+      <span class="spacer"></span>
+      <span id="planProgress" style="font-size:12px;color:var(--sub)"></span>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table" id="planTable">
+        <thead><tr><th>No</th><th>ID</th><th>Phase</th><th>薬剤</th><th>比率</th><th>毛束</th><th>目的</th><th>状態</th></tr></thead>
+        <tbody id="planBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- EXPORT PANEL -->
+  <div class="panel" id="panel-export">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:800px">
+      <div class="stat-card" style="cursor:pointer" onclick="exportCSV('measurements')">
+        <div class="num" style="font-size:20px">📄 測定データCSV</div>
+        <div class="label">全測定のLab + スペクトル（M0）をCSVダウンロード</div>
+      </div>
+      <div class="stat-card" style="cursor:pointer" onclick="exportCSV('median')">
+        <div class="num" style="font-size:20px">📊 中央値サマリCSV</div>
+        <div class="label">サンプルごとの中央値スペクトル + Lab</div>
+      </div>
+      <div class="stat-card" style="cursor:pointer" onclick="exportCSV('spectra_raw')">
+        <div class="num" style="font-size:20px">🌈 生スペクトルCSV</div>
+        <div class="label">全測定の380-730nm反射率（long形式）</div>
+      </div>
+      <div class="stat-card" style="cursor:pointer" onclick="exportCSV('plan')">
+        <div class="num" style="font-size:20px">📋 実験計画CSV</div>
+        <div class="label">170サンプルの計画 + 進捗状況</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// === Supabase Setup ===
+const SUPA_URL = 'https://flmeolcfutuwwbjmzyoz.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZsbWVvbGNmdXR1d3diam16eW96Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NzAxODYsImV4cCI6MjA3OTU0NjE4Nn0.VVxUxKexNeN6dUiAMDkCNlnIoXa-F5rfBqHPBDcwdnU';
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+// === CIE Data (D50/2°, 380-730nm, 10nm) ===
+const WL = Array.from({length:36},(_,i)=>380+i*10);
+const CMF_X=[0.0014,0.0042,0.0143,0.0435,0.1344,0.2839,0.3483,0.3362,0.2908,0.1954,0.0956,0.032,0.0049,0.0093,0.0633,0.1655,0.2904,0.4334,0.5945,0.7621,0.9163,1.0263,1.0622,1.0026,0.8544,0.6424,0.4479,0.2835,0.1649,0.0874,0.0468,0.0227,0.0114,0.0058,0.0029,0.0014];
+const CMF_Y=[0.0000,0.0001,0.0004,0.0012,0.0040,0.0116,0.023,0.038,0.06,0.091,0.139,0.208,0.323,0.503,0.71,0.862,0.954,0.995,0.995,0.952,0.87,0.757,0.631,0.503,0.381,0.265,0.175,0.107,0.061,0.032,0.017,0.0082,0.0041,0.0021,0.001,0.0005];
+const CMF_Z=[0.0065,0.0201,0.0679,0.2074,0.6456,1.3856,1.7471,1.7721,1.6692,1.2876,0.813,0.4652,0.272,0.1582,0.0782,0.0422,0.0203,0.0087,0.0039,0.0021,0.0017,0.0011,0.0008,0.0003,0.0002,0,0,0,0,0,0,0,0,0,0,0];
+const D50=[24.49,29.87,49.31,56.51,60.03,57.82,74.82,87.25,90.61,91.37,95.11,91.96,95.72,96.17,97.74,102.10,100.76,102.32,100.00,97.74,98.92,93.50,97.69,99.27,99.04,95.72,98.86,95.67,98.19,103.00,99.13,87.38,91.60,92.89,76.85,86.51];
+const Xn=96.422,Yn=100.0,Zn=82.521;
+
+function specToLab(spec){
+  const k=100/D50.reduce((s,d,i)=>s+d*CMF_Y[i],0);
+  let X=0,Y=0,Z=0;
+  for(let i=0;i<36;i++){X+=spec[i]*D50[i]*CMF_X[i];Y+=spec[i]*D50[i]*CMF_Y[i];Z+=spec[i]*D50[i]*CMF_Z[i];}
+  X*=k;Y*=k;Z*=k;
+  const f=t=>t>0.008856?Math.cbrt(t):7.787*t+16/116;
+  return{L:116*f(Y/Yn)-16, a:500*(f(X/Xn)-f(Y/Yn)), b:200*(f(Y/Yn)-f(Z/Zn)), X,Y,Z};
+}
+
+function labToSrgb(L,a,b){
+  const fy=(L+16)/116, fx=a/500+fy, fz=fy-b/200;
+  const d=6/29;
+  const x=Xn*(fx>d?fx**3:(fx-4/29)*3*d*d)/100;
+  const y=Yn*(fy>d?fy**3:(fy-4/29)*3*d*d)/100;
+  const z=Zn*(fz>d?fz**3:(fz-4/29)*3*d*d)/100;
+  let r=3.1338561*x-1.6168667*y-0.4906146*z;
+  let g=-0.9787684*x+1.9161415*y+0.0334540*z;
+  let bl=0.0719453*x-0.2289914*y+1.4052427*z;
+  const gm=v=>v<=0.0031308?12.92*v:1.055*v**(1/2.4)-0.055;
+  const cl=v=>Math.max(0,Math.min(255,Math.round(gm(Math.max(0,v))*255)));
+  return{r:cl(r),g:cl(g),b:cl(bl)};
+}
+
+function deltaEab(L1,a1,b1,L2,a2,b2){
+  return Math.sqrt((L1-L2)**2+(a1-a2)**2+(b1-b2)**2);
+}
+
+// === CxF3 Parser ===
+function parseCxF3(xmlStr, fileName){
+  const parser=new DOMParser();
+  const doc=parser.parseFromString(xmlStr,'text/xml');
+  const ns='http://colorexchangeformat.com/CxF3-core';
+  const objects=doc.getElementsByTagNameNS(ns,'Object');
+  const result={name:fileName.replace(/\.(txt|cxf|xml)$/i,''), m0:null, m1:null, m2:null, serial:''};
+  
+  // Get device serial
+  const customAttrs=doc.querySelector('CustomAttributes');
+  if(customAttrs){
+    result.serial=customAttrs.getAttribute('MeasurementDeviceSerialNumber')||'';
+  }
+  
+  for(const obj of objects){
+    const type=obj.getAttribute('ObjectType');
+    const specEl=obj.getElementsByTagNameNS(ns,'ReflectanceSpectrum')[0];
+    if(!specEl)continue;
+    const vals=specEl.textContent.trim().split(/\s+/).map(Number);
+    if(vals.length>=36){
+      if(type==='M0_Measurement')result.m0=vals.slice(0,36);
+      else if(type==='M1_Measurement')result.m1=vals.slice(0,36);
+      else if(type==='M2_Measurement')result.m2=vals.slice(0,36);
+    }
+  }
+  
+  if(result.m0){
+    const lab=specToLab(result.m0);
+    result.lab={L:lab.L,a:lab.a,b:lab.b};
+    const rgb=labToSrgb(lab.L,lab.a,lab.b);
+    result.srgb=rgb;
+    result.hex=`#${rgb.r.toString(16).padStart(2,'0')}${rgb.g.toString(16).padStart(2,'0')}${rgb.b.toString(16).padStart(2,'0')}`;
+    
+    if(result.m1){
+      const lab1=specToLab(result.m1);
+      result.deltaE_m0m1=deltaEab(lab.L,lab.a,lab.b,lab1.L,lab1.a,lab1.b);
+    }
+  }
+  return result;
+}
+
+// === UI Functions ===
+function showPanel(id){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  document.querySelectorAll('.tab')[['upload','data','analysis','plan','export'].indexOf(id)].classList.add('active');
+  if(id==='data')loadData();
+  if(id==='analysis')loadSampleList();
+  if(id==='plan')loadPlan();
+}
+
+function toast(msg,color){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.style.background=color||'var(--green)';t.style.display='block';
+  setTimeout(()=>t.style.display='none',3000);
+}
+
+// === Upload ===
+const dropZone=document.getElementById('dropZone');
+const fileInput=document.getElementById('fileInput');
+let pendingFiles=[];
+
+dropZone.addEventListener('click',()=>fileInput.click());
+dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('dragover');});
+dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop',e=>{e.preventDefault();dropZone.classList.remove('dragover');handleFiles(e.dataTransfer.files);});
+fileInput.addEventListener('change',e=>handleFiles(e.target.files));
+
+async function handleFiles(files){
+  const preview=document.getElementById('uploadPreview');
+  preview.innerHTML='';
+  pendingFiles=[];
+  
+  for(const file of files){
+    const text=await file.text();
+    try{
+      const parsed=parseCxF3(text,file.name);
+      if(!parsed.m0){preview.innerHTML+='<p style="color:var(--accent)">⚠ '+file.name+': M0スペクトルが見つかりません</p>';continue;}
+      parsed.rawXml=text;
+      pendingFiles.push(parsed);
+      
+      const card=document.createElement('div');
+      card.className='preview-card';
+      card.innerHTML=`
+        <div class="color-swatch" style="background:${parsed.hex}"></div>
+        <div class="preview-info">
+          <h4>${parsed.name}</h4>
+          <p>L*=${parsed.lab.L.toFixed(1)} a*=${parsed.lab.a.toFixed(1)} b*=${parsed.lab.b.toFixed(1)} | sRGB(${parsed.srgb.r},${parsed.srgb.g},${parsed.srgb.b}) | ${parsed.hex}</p>
+          <p>${parsed.deltaE_m0m1!=null?'ΔE(M0-M1)='+parsed.deltaE_m0m1.toFixed(3):'M1なし'} | Serial: ${parsed.serial}</p>
+        </div>
+        <div class="preview-actions">
+          <button class="btn btn-primary btn-sm" onclick="saveSingle(${pendingFiles.length-1})">保存</button>
+        </div>`;
+      preview.appendChild(card);
+    }catch(err){
+      preview.innerHTML+='<p style="color:var(--accent)">⚠ '+file.name+': パースエラー - '+err.message+'</p>';
+    }
+  }
+  
+  if(pendingFiles.length>1){
+    const allBtn=document.createElement('button');
+    allBtn.className='btn btn-success';allBtn.style.marginTop='12px';
+    allBtn.textContent=`全${pendingFiles.length}件を一括保存`;
+    allBtn.onclick=saveAll;
+    preview.appendChild(allBtn);
+  }
+}
+
+async function saveSingle(idx){
+  const p=pendingFiles[idx];
+  const mi=parseInt(document.getElementById('measIndex').value);
+  const notes=document.getElementById('uploadNotes').value;
+  
+  const row={
+    sample_name:p.name,
+    meas_index:mi,
+    m0_spectrum:p.m0,
+    m1_spectrum:p.m1,
+    m2_spectrum:p.m2,
+    lab_l:p.lab.L,
+    lab_a:p.lab.a,
+    lab_b:p.lab.b,
+    srgb_r:p.srgb.r,
+    srgb_g:p.srgb.g,
+    srgb_b:p.srgb.b,
+    hex_color:p.hex,
+    delta_e_m0m1:p.deltaE_m0m1||null,
+    device_serial:p.serial,
+    notes:notes,
+    raw_xml:p.rawXml
+  };
+  
+  const{error}=await sb.from('iroca_measurements').upsert(row,{onConflict:'sample_name,meas_index'});
+  if(error){toast('エラー: '+error.message,'var(--accent)');console.error(error);}
+  else toast(`✅ ${p.name} (${mi}回目) を保存しました`);
+}
+
+async function saveAll(){
+  const mi=parseInt(document.getElementById('measIndex').value);
+  const notes=document.getElementById('uploadNotes').value;
+  let ok=0,fail=0;
+  
+  for(const p of pendingFiles){
+    const row={
+      sample_name:p.name,meas_index:mi,m0_spectrum:p.m0,m1_spectrum:p.m1,m2_spectrum:p.m2,
+      lab_l:p.lab.L,lab_a:p.lab.a,lab_b:p.lab.b,srgb_r:p.srgb.r,srgb_g:p.srgb.g,srgb_b:p.srgb.b,
+      hex_color:p.hex,delta_e_m0m1:p.deltaE_m0m1||null,device_serial:p.serial,notes,raw_xml:p.rawXml
+    };
+    const{error}=await sb.from('iroca_measurements').upsert(row,{onConflict:'sample_name,meas_index'});
+    if(error)fail++;else ok++;
+  }
+  toast(`✅ ${ok}件保存 / ${fail}件エラー`);
+}
+
+// === Data Table ===
+async function loadData(){
+  const phase=document.getElementById('filterPhase').value;
+  const nameFilter=document.getElementById('filterName').value;
+  
+  let query=sb.from('iroca_measurements').select('*').order('sample_name').order('meas_index');
+  if(nameFilter)query=query.ilike('sample_name','%'+nameFilter+'%');
+  
+  const{data,error}=await query;
+  if(error){console.error(error);return;}
+  
+  // Stats
+  const unique=new Set(data.map(d=>d.sample_name));
+  document.getElementById('statsRow').innerHTML=`
+    <div class="stat-card"><div class="num">${data.length}</div><div class="label">総測定数</div></div>
+    <div class="stat-card"><div class="num">${unique.size}</div><div class="label">サンプル数</div></div>
+    <div class="stat-card"><div class="num">${unique.size}/170</div><div class="label">進捗</div></div>
+    <div class="stat-card"><div class="num">${data.filter(d=>d.delta_e_m0m1&&d.delta_e_m0m1>0.3).length}</div><div class="label">蛍光検出(ΔE>0.3)</div></div>`;
+  
+  const tbody=document.getElementById('dataBody');
+  tbody.innerHTML=data.map(d=>`<tr>
+    <td><span class="swatch-sm" style="background:${d.hex_color||'#333'}"></span></td>
+    <td style="font-weight:600">${d.sample_name}</td>
+    <td>${d.meas_index}</td>
+    <td>${d.lab_l?.toFixed(2)||'—'}</td>
+    <td>${d.lab_a?.toFixed(2)||'—'}</td>
+    <td>${d.lab_b?.toFixed(2)||'—'}</td>
+    <td style="font-size:10px">${d.srgb_r},${d.srgb_g},${d.srgb_b}</td>
+    <td style="color:${d.delta_e_m0m1>0.3?'var(--yellow)':'var(--green)'}">${d.delta_e_m0m1?.toFixed(3)||'—'}</td>
+    <td style="font-size:10px;color:var(--sub)">${new Date(d.created_at).toLocaleString('ja-JP')}</td>
+    <td><button class="btn btn-secondary btn-sm" onclick="deleteMeas(${d.id})">✕</button></td>
+  </tr>`).join('');
+}
+
+async function deleteMeas(id){
+  if(!confirm('この測定を削除しますか？'))return;
+  await sb.from('iroca_measurements').delete().eq('id',id);
+  loadData();toast('削除しました','var(--sub)');
+}
+
+// === Analysis ===
+let specChart=null;
+
+async function loadSampleList(){
+  const{data}=await sb.from('iroca_measurements').select('sample_name').order('sample_name');
+  if(!data)return;
+  const unique=[...new Set(data.map(d=>d.sample_name))];
+  const sel=document.getElementById('analysisSample');
+  sel.innerHTML=unique.map(n=>`<option>${n}</option>`).join('');
+  if(unique.length)loadAnalysis();
+}
+
+async function loadAnalysis(){
+  const name=document.getElementById('analysisSample').value;
+  if(!name)return;
+  
+  const{data}=await sb.from('iroca_measurements').select('*').eq('sample_name',name).order('meas_index');
+  if(!data||!data.length)return;
+  
+  // Spectral chart
+  const ctx=document.getElementById('specChart').getContext('2d');
+  if(specChart)specChart.destroy();
+  
+  const datasets=data.map((d,i)=>({
+    label:`測定${d.meas_index}`,
+    data:d.m0_spectrum,
+    borderColor:`hsl(${i*60},70%,60%)`,
+    borderWidth:1.5,
+    pointRadius:0,
+    tension:0.3
+  }));
+  
+  // Add median if multiple
+  if(data.length>1){
+    const median=WL.map((_,wi)=>{
+      const vals=data.map(d=>d.m0_spectrum[wi]).sort((a,b)=>a-b);
+      return vals[Math.floor(vals.length/2)];
+    });
+    datasets.push({label:'中央値',data:median,borderColor:'#fff',borderWidth:2.5,pointRadius:0,tension:0.3,borderDash:[]});
+  }
+  
+  specChart=new Chart(ctx,{type:'line',data:{labels:WL,datasets},
+    options:{responsive:true,plugins:{title:{display:true,text:`${name} 反射スペクトル R(λ)`,color:'#e4e4e7'},legend:{labels:{color:'#9ca3af'}}},
+    scales:{x:{title:{display:true,text:'波長 (nm)',color:'#9ca3af'},ticks:{color:'#9ca3af'},grid:{color:'#2a2d3a'}},
+            y:{title:{display:true,text:'反射率',color:'#9ca3af'},ticks:{color:'#9ca3af'},grid:{color:'#2a2d3a'},min:0,max:0.5}}}});
+  
+  // Detail
+  const d=data[0];
+  const detail=document.getElementById('analysisDetail');
+  detail.innerHTML=`
+    <div class="stat-card">
+      <h4 style="margin-bottom:8px">Lab (D50/2°)</h4>
+      <div style="display:flex;gap:16px;align-items:center">
+        <div class="color-swatch" style="width:64px;height:64px;background:${d.hex_color}"></div>
+        <div>
+          <p>L* = <strong>${d.lab_l?.toFixed(2)}</strong></p>
+          <p>a* = <strong>${d.lab_a?.toFixed(2)}</strong></p>
+          <p>b* = <strong>${d.lab_b?.toFixed(2)}</strong></p>
+          <p style="margin-top:4px;font-size:11px;color:var(--sub)">sRGB: (${d.srgb_r},${d.srgb_g},${d.srgb_b}) ${d.hex_color}</p>
+        </div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <h4 style="margin-bottom:8px">測定情報</h4>
+      <p>測定回数: <strong>${data.length}</strong></p>
+      <p>ΔE(M0-M1): <strong>${d.delta_e_m0m1?.toFixed(3)||'—'}</strong></p>
+      <p>デバイス: ${d.device_serial||'—'}</p>
+      <p style="margin-top:8px">K/S(λ)ピーク: <strong>${WL[d.m0_spectrum.indexOf(Math.min(...d.m0_spectrum.slice(3)))]}nm</strong></p>
+    </div>`;
+}
+
+// === Experiment Plan ===
+async function loadPlan(){
+  const phase=document.getElementById('planPhase').value;
+  let query=sb.from('iroca_experiment_plan').select('*').order('seq_no');
+  if(phase)query=query.eq('phase',phase);
+  
+  const{data,error}=await query;
+  if(error||!data){document.getElementById('planBody').innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--sub)">実験計画が未登録です。CSVインポートで登録してください。</td></tr>';return;}
+  
+  const measured=data.filter(d=>d.status==='measured').length;
+  document.getElementById('planProgress').textContent=`進捗: ${measured}/${data.length} (${(measured/data.length*100).toFixed(0)}%)`;
+  
+  document.getElementById('planBody').innerHTML=data.map(d=>`<tr>
+    <td>${d.seq_no}</td><td style="font-weight:600">${d.id}</td><td>${d.phase}</td>
+    <td>${d.drug}</td><td>${d.ratio||'—'}</td><td>${d.hair_type}</td><td style="font-size:11px">${d.purpose||''}</td>
+    <td class="status-${d.status}">${d.status==='measured'?'✅ 測定済':d.status==='analyzed'?'📊 分析済':'⏳ 未測定'}</td>
+  </tr>`).join('');
+}
+
+// === Export ===
+async function exportCSV(type){
+  let csv='',filename='';
+  
+  if(type==='measurements'){
+    const{data}=await sb.from('iroca_measurements').select('*').order('sample_name').order('meas_index');
+    if(!data)return;
+    const wlHeaders=WL.map(w=>'R_'+w).join(',');
+    csv='sample_name,meas_index,lab_l,lab_a,lab_b,srgb_r,srgb_g,srgb_b,hex,delta_e_m0m1,device_serial,created_at,'+wlHeaders+'\n';
+    csv+=data.map(d=>{
+      const spec=d.m0_spectrum?d.m0_spectrum.join(','):'';
+      return `${d.sample_name},${d.meas_index},${d.lab_l?.toFixed(4)},${d.lab_a?.toFixed(4)},${d.lab_b?.toFixed(4)},${d.srgb_r},${d.srgb_g},${d.srgb_b},${d.hex_color},${d.delta_e_m0m1?.toFixed(4)||''},${d.device_serial||''},${d.created_at},${spec}`;
+    }).join('\n');
+    filename='iroca_measurements.csv';
+  }
+  else if(type==='spectra_raw'){
+    const{data}=await sb.from('iroca_measurements').select('sample_name,meas_index,m0_spectrum').order('sample_name').order('meas_index');
+    if(!data)return;
+    csv='sample_name,meas_index,wavelength_nm,R\n';
+    for(const d of data){
+      if(!d.m0_spectrum)continue;
+      for(let i=0;i<36;i++){
+        csv+=`${d.sample_name},${d.meas_index},${WL[i]},${d.m0_spectrum[i]}\n`;
+      }
+    }
+    filename='iroca_spectra_raw_long.csv';
+  }
+  else if(type==='plan'){
+    const{data}=await sb.from('iroca_experiment_plan').select('*').order('seq_no');
+    if(!data)return;
+    csv='seq_no,id,phase,drug,ratio,hair_type,purpose,recipe_name,status\n';
+    csv+=data.map(d=>`${d.seq_no},${d.id},${d.phase},${d.drug},${d.ratio||''},${d.hair_type},${d.purpose||''},${d.recipe_name||''},${d.status}`).join('\n');
+    filename='iroca_experiment_plan.csv';
+  }
+  
+  if(!csv)return;
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();
+  toast('📥 '+filename+' をダウンロードしました');
+}
+
+// === Init ===
+async function init(){
+  try{
+    const{count}=await sb.from('iroca_measurements').select('*',{count:'exact',head:true});
+    document.getElementById('dbStatus').textContent=`✅ Supabase接続OK (${count||0}件)`;
+    document.getElementById('dbStatus').style.color='var(--green)';
+  }catch(e){
+    document.getElementById('dbStatus').textContent='❌ 接続エラー';
+    document.getElementById('dbStatus').style.color='var(--accent)';
+  }
+}
+init();
+</script>
+</body>
+</html>
