@@ -264,6 +264,14 @@ const SUPA_URL = 'https://flmeolcfutuwwbjmzyoz.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZsbWVvbGNmdXR1d3diam16eW96Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NzAxODYsImV4cCI6MjA3OTU0NjE4Nn0.VVxUxKexNeN6dUiAMDkCNlnIoXa-F5rfBqHPBDcwdnU';
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 
+// === Plan ID extraction helper ===
+// "a01-1" → "a01", "a01-5" → "a01", legacy "A-01_xxx" → "a01"
+function extractPlanId(sampleName){
+  let s=sampleName.split('_')[0]; // handle underscore-separated names
+  s=s.replace(/-\d+$/,'');        // strip measurement number suffix
+  return s.toLowerCase().replace(/-/g,''); // normalize
+}
+
 // === CIE Data (D50/2°, 380-730nm, 10nm) ===
 const WL = Array.from({length:36},(_,i)=>380+i*10);
 const CMF_X=[0.0014,0.0042,0.0143,0.0435,0.1344,0.2839,0.3483,0.3362,0.2908,0.1954,0.0956,0.032,0.0049,0.0093,0.0633,0.1655,0.2904,0.4334,0.5945,0.7621,0.9163,1.0263,1.0622,1.0026,0.8544,0.6424,0.4479,0.2835,0.1649,0.0874,0.0468,0.0227,0.0114,0.0058,0.0029,0.0014];
@@ -514,11 +522,8 @@ async function computeMedianAndUpdatePlan(sampleName){
   },{onConflict:'sample_name'});
   
   // Update experiment plan status if this sample matches a plan entry
-  // Match by checking if any plan drug matches the sample_name
-  const{data:plans}=await sb.from('iroca_experiment_plan').select('id').ilike('id','%');
-  // Simple approach: update any plan entry whose ID is a prefix of the sample_name
-  // e.g. sample_name="A-01_N3_white100" → plan id="A-01"
-  const planId=sampleName.split('_')[0]; // e.g. "A-01"
+  // Extract plan ID: "a01-1" → "a01", legacy "A-01_xxx" → "a01"
+  const planId=extractPlanId(sampleName);
   if(planId){
     await sb.from('iroca_experiment_plan').update({status:'measured'}).eq('id',planId);
   }
@@ -710,11 +715,11 @@ async function loadData(){
   const{data:planData}=await sb.from('iroca_experiment_plan').select('id');
   const planIds=new Set((planData||[]).map(p=>p.id));
   const uniqueSamples=new Set(data.map(d=>d.sample_name));
-  // Match: sample_name starts with a plan ID (e.g. "A-01_xxx" → "A-01")
+  // Match: sample_name → plan ID (e.g. "a01-1" → "a01")
   let matchedPlanCount=0;
   const matchedPlanIds=new Set();
   for(const sn of uniqueSamples){
-    const prefix=sn.split('_')[0];
+    const prefix=extractPlanId(sn);
     if(planIds.has(prefix)&&!matchedPlanIds.has(prefix)){matchedPlanIds.add(prefix);matchedPlanCount++;}
   }
   
@@ -864,7 +869,7 @@ async function loadPlan(){
   const measByPlan={};  // planId → [{...}]
   if(allMeas){
     for(const m of allMeas){
-      const prefix=m.sample_name.split('_')[0];
+      const prefix=extractPlanId(m.sample_name);
       if(!measByPlan[prefix])measByPlan[prefix]=[];
       measByPlan[prefix].push(m);
     }
