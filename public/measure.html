@@ -35,6 +35,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 /* Table */
 .data-table{width:100%;border-collapse:collapse;font-size:12px}
 .data-table th{background:var(--card);padding:10px 12px;text-align:left;font-weight:600;color:var(--sub);text-transform:uppercase;font-size:10px;letter-spacing:0.5px;position:sticky;top:0;border-bottom:1px solid var(--border)}
+.data-table th.sortable{cursor:pointer;user-select:none;transition:color .2s}
+.data-table th.sortable:hover{color:var(--text)}
+.data-table th.sortable::after{content:'⇅';margin-left:4px;opacity:0.3;font-size:9px}
+.data-table th.sort-asc::after{content:'▲';opacity:1;color:var(--accent2)}
+.data-table th.sort-desc::after{content:'▼';opacity:1;color:var(--accent2)}
 .data-table td{padding:8px 12px;border-bottom:1px solid var(--border)}
 .data-table tr:hover{background:rgba(255,255,255,0.02)}
 .swatch-sm{width:24px;height:24px;border-radius:4px;display:inline-block;vertical-align:middle;border:1px solid var(--border)}
@@ -134,7 +139,16 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <div class="table-wrap">
       <table class="data-table" id="dataTable">
         <thead><tr>
-          <th>色</th><th>サンプル名</th><th>回</th><th>L*</th><th>a*</th><th>b*</th><th>sRGB</th><th>ΔE(M0-M1)</th><th>日時</th><th></th>
+          <th>色</th>
+          <th class="sortable" onclick="setSort('sample_name')">サンプル名</th>
+          <th class="sortable" onclick="setSort('meas_index')">回</th>
+          <th class="sortable" onclick="setSort('lab_l')">L*</th>
+          <th class="sortable" onclick="setSort('lab_a')">a*</th>
+          <th class="sortable" onclick="setSort('lab_b')">b*</th>
+          <th>sRGB</th>
+          <th class="sortable" onclick="setSort('delta_e_m0m1')">ΔE(M0-M1)</th>
+          <th class="sortable sort-desc" onclick="setSort('created_at')">日時</th>
+          <th></th>
         </tr></thead>
         <tbody id="dataBody"></tbody>
       </table>
@@ -424,11 +438,28 @@ async function saveAll(btnEl){
 }
 
 // === Data Table ===
+let sortCol = 'created_at';
+let sortDir = 'desc';  // デフォルト: 日時の新しい順
+
+function setSort(col){
+  if(sortCol === col) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+  else { sortCol = col; sortDir = (col === 'created_at') ? 'desc' : 'asc'; }
+  // ヘッダーの表示更新
+  document.querySelectorAll('#dataTable th.sortable').forEach(th => {
+    th.classList.remove('sort-asc','sort-desc');
+  });
+  const headers = document.querySelectorAll('#dataTable th.sortable');
+  const colMap = ['sample_name','meas_index','lab_l','lab_a','lab_b','delta_e_m0m1','created_at'];
+  const idx = colMap.indexOf(col);
+  if(idx >= 0 && headers[idx]) headers[idx].classList.add(sortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+  loadData();
+}
+
 async function loadData(){
-  const phase=document.getElementById('filterPhase').value;
   const nameFilter=document.getElementById('filterName').value;
   
-  let query=sb.from('iroca_measurements').select('*').order('sample_name').order('meas_index');
+  let query=sb.from('iroca_measurements').select('*').order(sortCol, {ascending: sortDir === 'asc'});
+  if(sortCol !== 'meas_index') query = query.order('meas_index', {ascending: true});
   if(nameFilter)query=query.ilike('sample_name','%'+nameFilter+'%');
   
   const{data,error}=await query;
