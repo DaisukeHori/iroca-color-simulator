@@ -227,8 +227,8 @@
       <h2>カラー調合</h2>
     </div>
 
-    <div class="video-container">
-      <iframe src="https://revol01-my.sharepoint.com/personal/hori_revol_co_jp/_layouts/15/embed.aspx?UniqueId=2d300110-c05e-479a-9225-cd669dac7e62&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create" allowfullscreen></iframe>
+    <div class="video-player" onclick="playVideo(this,'https://revol01-my.sharepoint.com/:v:/g/personal/hori_revol_co_jp/IQAQATAtXsCaR5IlzWadrH5iAewW-62MwKvWZmX9K5gno5g?e=wjHzPZ&action=embedview')">
+      <div class="video-thumb"><div class="play-btn"></div><div class="video-label">▶ 動画で見る：カラー調合</div></div>
     </div>
 
     <div class="step">
@@ -315,8 +315,8 @@
       <h2>カラー塗布</h2>
     </div>
 
-    <div class="video-container">
-      <iframe src="https://revol01-my.sharepoint.com/personal/hori_revol_co_jp/_layouts/15/embed.aspx?UniqueId=aba5ed3c-7d6f-4610-8ef3-76710b5a81ea&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create" allowfullscreen></iframe>
+    <div class="video-player" onclick="playVideo(this,'https://revol01-my.sharepoint.com/:v:/g/personal/hori_revol_co_jp/IQA87aWrb30QRo7zdnELWoHqAecUD3ytGNGOXeVOtgRfANM?e=VKMfvU&action=embedview')">
+      <div class="video-thumb"><div class="play-btn"></div><div class="video-label">▶ 動画で見る：カラー塗布</div></div>
     </div>
 
     <div class="step">
@@ -371,8 +371,8 @@
       <h2>水洗い</h2>
     </div>
 
-    <div class="video-container">
-      <iframe src="https://revol01-my.sharepoint.com/personal/hori_revol_co_jp/_layouts/15/embed.aspx?UniqueId=b2e86402-4a1f-40b3-962b-07db79b51bd1&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create" allowfullscreen></iframe>
+    <div class="video-player" onclick="playVideo(this,'https://revol01-my.sharepoint.com/:v:/g/personal/hori_revol_co_jp/IQACZOiyH0qzQJYrB9t5tRvRARhYeqjJOey1vRLRVRUVe40?e=UvRnUX&action=embedview')">
+      <div class="video-thumb"><div class="play-btn"></div><div class="video-label">▶ 動画で見る：水洗い</div></div>
     </div>
 
     <div class="step">
@@ -398,8 +398,8 @@
       <h2>乾燥</h2>
     </div>
 
-    <div class="video-container">
-      <iframe src="https://revol01-my.sharepoint.com/personal/hori_revol_co_jp/_layouts/15/embed.aspx?UniqueId=1773512a-9cca-4cba-b28c-39f4b2e73ef8&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create" allowfullscreen></iframe>
+    <div class="video-player" onclick="playVideo(this,'https://revol01-my.sharepoint.com/:v:/g/personal/hori_revol_co_jp/IQAqUXMXypy6TLKMOfSy5z74AWv-DtIbipbjIuwTQUqor6A?e=nu2pdD&action=embedview')">
+      <div class="video-thumb"><div class="play-btn"></div><div class="video-label">▶ 動画で見る：乾燥</div></div>
     </div>
 
     <div class="step">
@@ -469,5 +469,12 @@
   </p>
 </div>
 
+<script>
+function playVideo(el, url) {
+  el.innerHTML = '<iframe src="' + url + '" allowfullscreen></iframe>';
+  el.style.cursor = 'default';
+  el.onclick = null;
+}
+</script>
 </body>
 </html>
