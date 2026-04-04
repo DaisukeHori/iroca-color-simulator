@@ -108,24 +108,25 @@
   }
   .video-player .video-thumb {
     width: 100%;
-    aspect-ratio: 16/9;
+    padding: 28px 0;
     background: linear-gradient(135deg, #0a3d62 0%, #1a1a2e 100%);
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: 16px;
     transition: all 0.3s;
   }
   .video-player:hover .video-thumb {
     background: linear-gradient(135deg, #0f4c75 0%, #1f2a40 100%);
   }
   .video-player .play-btn {
-    width: 72px; height: 72px;
+    width: 48px; height: 48px;
     background: rgba(233,69,96,0.9);
     border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     transition: transform 0.2s, background 0.2s;
+    flex-shrink: 0;
   }
   .video-player:hover .play-btn {
     transform: scale(1.1);
@@ -136,21 +137,15 @@
     display: block;
     width: 0; height: 0;
     border-style: solid;
-    border-width: 14px 0 14px 24px;
+    border-width: 10px 0 10px 17px;
     border-color: transparent transparent transparent #fff;
-    margin-left: 4px;
+    margin-left: 3px;
   }
   .video-player .video-label {
     color: rgba(255,255,255,0.8);
     font-size: 0.9rem;
     font-weight: 500;
     letter-spacing: 0.5px;
-  }
-  .video-player iframe {
-    width: 100%;
-    aspect-ratio: 16/9;
-    border: none;
-    display: block;
   }
   @media print {
     .step { break-inside: avoid; box-shadow: none; border: 1px solid #ddd; }
@@ -212,8 +207,8 @@
           白髪100% / 黒髪100% / 白髪50% / 白髪30% など、計画書の指示に従って毛束を選びます。
         </div>
         <p>同じ調合で複数の白髪率の毛束に塗る場合は、<strong>全ての毛束をまとめて準備</strong>してください。</p>
-        <div class="video-player" onclick="playVideo(this,'https://revol01-my.sharepoint.com/:v:/g/personal/hori_revol_co_jp/IQABJXv3q0LcSrNPMulG_dG4AYvzxNWZzk-i_TXVKRCV_BY?e=6MZy2M&action=embedview')">
-          <div class="video-thumb"><div class="play-btn"></div><div class="video-label">▶ 動画で見る：ウェット</div></div>
+        <div class="video-player" onclick="playVideo(this,'https://revol01-my.sharepoint.com/:v:/g/personal/hori_revol_co_jp/IQABJXv3q0LcSrNPMulG_dG4AYvzxNWZzk-i_TXVKRCV_BY?e=6MZy2M')">
+          <div class="video-thumb"><div class="play-btn"></div><div class="video-label">▶ 動画を再生：ウェット</div></div>
         </div>
       </div>
     </div>
@@ -276,8 +271,8 @@
           ⚠️ <strong>同じ調合で複数毛束に塗る場合</strong><br>
           必要な量をまとめて1回で調合してください。毛束ごとに別々に作ると比率のブレが出ます。
         </div>
-        <div class="video-player" onclick="playVideo(this,'https://revol01-my.sharepoint.com/:v:/g/personal/hori_revol_co_jp/IQAQATAtXsCaR5IlzWadrH5iAewW-62MwKvWZmX9K5gno5g?e=wjHzPZ&action=embedview')">
-          <div class="video-thumb"><div class="play-btn"></div><div class="video-label">▶ 動画で見る：カラー調合</div></div>
+        <div class="video-player" onclick="playVideo(this,'https://revol01-my.sharepoint.com/:v:/g/personal/hori_revol_co_jp/IQAQATAtXsCaR5IlzWadrH5iAewW-62MwKvWZmX9K5gno5g?e=wjHzPZ')">
+          <div class="video-thumb"><div class="play-btn"></div><div class="video-label">▶ 動画を再生：カラー調合</div></div>
         </div>
       </div>
     </div>
@@ -330,8 +325,8 @@
         <div class="box box-warn">
           ⚠️ 塗布は手早く行うこと。1人で10分以内が目安。時間がかかると最初に塗った毛束との放置時間差が出ます。
         </div>
-        <div class="video-player" onclick="playVideo(this,'https://revol01-my.sharepoint.com/:v:/g/personal/hori_revol_co_jp/IQA87aWrb30QRo7zdnELWoHqAecUD3ytGNGOXeVOtgRfANM?e=VKMfvU&action=embedview')">
-          <div class="video-thumb"><div class="play-btn"></div><div class="video-label">▶ 動画で見る：カラー塗布</div></div>
+        <div class="video-player" onclick="playVideo(this,'https://revol01-my.sharepoint.com/:v:/g/personal/hori_revol_co_jp/IQA87aWrb30QRo7zdnELWoHqAecUD3ytGNGOXeVOtgRfANM?e=VKMfvU')">
+          <div class="video-thumb"><div class="play-btn"></div><div class="video-label">▶ 動画を再生：カラー塗布</div></div>
         </div>
       </div>
     </div>
@@ -380,8 +375,8 @@
         <div class="box box-warn">
           ⚠️ 薬剤の残留は発色ムラの原因になります。ぬるつきが完全になくなるまで十分に水洗いしてください。
         </div>
-        <div class="video-player" onclick="playVideo(this,'https://revol01-my.sharepoint.com/:v:/g/personal/hori_revol_co_jp/IQACZOiyH0qzQJYrB9t5tRvRARhYeqjJOey1vRLRVRUVe40?e=UvRnUX&action=embedview')">
-          <div class="video-thumb"><div class="play-btn"></div><div class="video-label">▶ 動画で見る：水洗い</div></div>
+        <div class="video-player" onclick="playVideo(this,'https://revol01-my.sharepoint.com/:v:/g/personal/hori_revol_co_jp/IQACZOiyH0qzQJYrB9t5tRvRARhYeqjJOey1vRLRVRUVe40?e=UvRnUX')">
+          <div class="video-thumb"><div class="play-btn"></div><div class="video-label">▶ 動画を再生：水洗い</div></div>
         </div>
       </div>
     </div>
@@ -405,8 +400,8 @@
         <div class="box box-success">
           ✅ 乾燥完了後、<a href="../manual/" style="color:#155724;font-weight:600;">測色マニュアル</a>に従ってi1Pro 2で測定してください。
         </div>
-        <div class="video-player" onclick="playVideo(this,'https://revol01-my.sharepoint.com/:v:/g/personal/hori_revol_co_jp/IQAqUXMXypy6TLKMOfSy5z74AWv-DtIbipbjIuwTQUqor6A?e=nu2pdD&action=embedview')">
-          <div class="video-thumb"><div class="play-btn"></div><div class="video-label">▶ 動画で見る：乾燥</div></div>
+        <div class="video-player" onclick="playVideo(this,'https://revol01-my.sharepoint.com/:v:/g/personal/hori_revol_co_jp/IQAqUXMXypy6TLKMOfSy5z74AWv-DtIbipbjIuwTQUqor6A?e=nu2pdD')">
+          <div class="video-thumb"><div class="play-btn"></div><div class="video-label">▶ 動画を再生：乾燥</div></div>
         </div>
       </div>
     </div>
@@ -466,9 +461,7 @@
 
 <script>
 function playVideo(el, url) {
-  el.innerHTML = '<iframe src="' + url + '" allowfullscreen></iframe>';
-  el.style.cursor = 'default';
-  el.onclick = null;
+  window.open(url, '_blank');
 }
 </script>
 </body>
