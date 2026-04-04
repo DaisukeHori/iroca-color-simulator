@@ -98,14 +98,55 @@
     border-top: 1px solid var(--border); max-width: 800px; margin: 0 auto;
   }
   .footer a { color: var(--accent); text-decoration: none; }
-  .video-container {
+  .video-player {
     margin-bottom: 20px;
     border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-    background: #000;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    position: relative;
+    cursor: pointer;
   }
-  .video-container iframe {
+  .video-player .video-thumb {
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: linear-gradient(135deg, #0a3d62 0%, #1a1a2e 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    transition: all 0.3s;
+  }
+  .video-player:hover .video-thumb {
+    background: linear-gradient(135deg, #0f4c75 0%, #1f2a40 100%);
+  }
+  .video-player .play-btn {
+    width: 72px; height: 72px;
+    background: rgba(233,69,96,0.9);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.2s, background 0.2s;
+  }
+  .video-player:hover .play-btn {
+    transform: scale(1.1);
+    background: rgba(233,69,96,1);
+  }
+  .video-player .play-btn::after {
+    content: '';
+    display: block;
+    width: 0; height: 0;
+    border-style: solid;
+    border-width: 14px 0 14px 24px;
+    border-color: transparent transparent transparent #fff;
+    margin-left: 4px;
+  }
+  .video-player .video-label {
+    color: rgba(255,255,255,0.8);
+    font-size: 0.9rem;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+  .video-player iframe {
     width: 100%;
     aspect-ratio: 16/9;
     border: none;
@@ -162,8 +203,8 @@
       <h2>毛束の準備</h2>
     </div>
 
-    <div class="video-container">
-      <iframe src="https://revol01-my.sharepoint.com/:v:/g/personal/hori_revol_co_jp/IQABJXv3q0LcSrNPMulG_dG4AYvzxNWZzk-i_TXVKRCV_BY?e=6MZy2M&action=embedview" allowfullscreen></iframe>
+    <div class="video-player" onclick="playVideo(this,'https://revol01-my.sharepoint.com/personal/hori_revol_co_jp/_layouts/15/embed.aspx?UniqueId=f77b2501-42ab-4adc-b34f-32e946fdd1b8&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create')">
+      <div class="video-thumb"><div class="play-btn"></div><div class="video-label">▶ 動画で見る：ウェット</div></div>
     </div>
 
     <div class="step">
@@ -187,7 +228,7 @@
     </div>
 
     <div class="video-container">
-      <iframe src="https://revol01-my.sharepoint.com/:v:/g/personal/hori_revol_co_jp/IQAQATAtXsCaR5IlzWadrH5iAewW-62MwKvWZmX9K5gno5g?e=wjHzPZ&action=embedview" allowfullscreen></iframe>
+      <iframe src="https://revol01-my.sharepoint.com/personal/hori_revol_co_jp/_layouts/15/embed.aspx?UniqueId=2d300110-c05e-479a-9225-cd669dac7e62&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create" allowfullscreen></iframe>
     </div>
 
     <div class="step">
@@ -275,7 +316,7 @@
     </div>
 
     <div class="video-container">
-      <iframe src="https://revol01-my.sharepoint.com/:v:/g/personal/hori_revol_co_jp/IQA87aWrb30QRo7zdnELWoHqAecUD3ytGNGOXeVOtgRfANM?e=VKMfvU&action=embedview" allowfullscreen></iframe>
+      <iframe src="https://revol01-my.sharepoint.com/personal/hori_revol_co_jp/_layouts/15/embed.aspx?UniqueId=aba5ed3c-7d6f-4610-8ef3-76710b5a81ea&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create" allowfullscreen></iframe>
     </div>
 
     <div class="step">
@@ -331,7 +372,7 @@
     </div>
 
     <div class="video-container">
-      <iframe src="https://revol01-my.sharepoint.com/:v:/g/personal/hori_revol_co_jp/IQACZOiyH0qzQJYrB9t5tRvRARhYeqjJOey1vRLRVRUVe40?e=UvRnUX&action=embedview" allowfullscreen></iframe>
+      <iframe src="https://revol01-my.sharepoint.com/personal/hori_revol_co_jp/_layouts/15/embed.aspx?UniqueId=b2e86402-4a1f-40b3-962b-07db79b51bd1&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create" allowfullscreen></iframe>
     </div>
 
     <div class="step">
@@ -358,7 +399,7 @@
     </div>
 
     <div class="video-container">
-      <iframe src="https://revol01-my.sharepoint.com/:v:/g/personal/hori_revol_co_jp/IQAqUXMXypy6TLKMOfSy5z74AWv-DtIbipbjIuwTQUqor6A?e=nu2pdD&action=embedview" allowfullscreen></iframe>
+      <iframe src="https://revol01-my.sharepoint.com/personal/hori_revol_co_jp/_layouts/15/embed.aspx?UniqueId=1773512a-9cca-4cba-b28c-39f4b2e73ef8&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create" allowfullscreen></iframe>
     </div>
 
     <div class="step">
