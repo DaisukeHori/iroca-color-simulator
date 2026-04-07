@@ -274,6 +274,24 @@ function extractPlanId(sampleName){
   return s.toLowerCase().replace(/-/g,''); // normalize
 }
 
+// Extract both sample name (plan ID) and measurement number from filename
+// "a01-2.cxf" → { sampleName: "a01", measNum: 2 }
+// "a01.cxf"   → { sampleName: "a01", measNum: null } (auto-detect)
+// "A-01_xxx.cxf" → { sampleName: "a01", measNum: null }
+function extractSampleInfo(fileName){
+  let base=fileName.replace(/\.(txt|cxf|xml|cmxf)$/i,'');
+  // Split off underscore suffixes (legacy format)
+  base=base.split('_')[0];
+  // Check for measurement number suffix: a01-2 → a01, 2
+  const match=base.match(/^(.+?)-(\d+)$/);
+  if(match){
+    const id=match[1].toLowerCase().replace(/-/g,'');
+    return { sampleName:id, measNum:parseInt(match[2]) };
+  }
+  // No suffix: just normalize
+  return { sampleName:base.toLowerCase().replace(/-/g,''), measNum:null };
+}
+
 // === CIE Data (D50/2°, 380-730nm, 10nm) ===
 const WL = Array.from({length:36},(_,i)=>380+i*10);
 const CMF_X=[0.0014,0.0042,0.0143,0.0435,0.1344,0.2839,0.3483,0.3362,0.2908,0.1954,0.0956,0.032,0.0049,0.0093,0.0633,0.1655,0.2904,0.4334,0.5945,0.7621,0.9163,1.0263,1.0622,1.0026,0.8544,0.6424,0.4479,0.2835,0.1649,0.0874,0.0468,0.0227,0.0114,0.0058,0.0029,0.0014];
@@ -315,7 +333,7 @@ function parseCxF3(xmlStr, fileName){
   const doc=parser.parseFromString(xmlStr,'text/xml');
   const ns='http://colorexchangeformat.com/CxF3-core';
   const objects=doc.getElementsByTagNameNS(ns,'Object');
-  const result={name:fileName.replace(/\.(txt|cxf|xml)$/i,''), m0:null, m1:null, m2:null, serial:''};
+  const result={name:fileName.replace(/\.(txt|cxf|xml|cmxf)$/i,''), m0:null, m1:null, m2:null, serial:''};
   
   // Get device serial
   const customAttrs=doc.querySelector('CustomAttributes');
@@ -395,11 +413,21 @@ async function handleFiles(files){
       if(!parsed.m0){preview.innerHTML+='<p style="color:var(--accent)">⚠ '+file.name+': M0スペクトルが見つかりません</p>';continue;}
       parsed.rawXml=text;
       
-      // Auto-detect next meas_index
-      const{data:existing}=await sb.from('iroca_measurements').select('meas_index').eq('sample_name',parsed.name).order('meas_index',{ascending:false}).limit(1);
-      const nextIdx = (existing && existing.length > 0) ? existing[0].meas_index + 1 : 1;
-      parsed.nextIdx = nextIdx;
-      const existCount = nextIdx - 1;
+      // Count existing measurements for this SAMPLE (grouped by plan ID)
+      const planId=extractPlanId(parsed.name);
+      const info=extractSampleInfo(file.name);
+      const{data:existing}=await sb.from('iroca_measurements').select('sample_name,meas_index').order('meas_index',{ascending:false});
+      // Filter by planId (a01-1, a01-2, a01 all belong to plan "a01")
+      const existForPlan=(existing||[]).filter(e=>extractPlanId(e.sample_name)===planId);
+      const existCount=existForPlan.length;
+      
+      // Determine meas_index: use filename suffix if present, otherwise auto-increment
+      if(info.measNum){
+        parsed.nextIdx = info.measNum;
+      } else {
+        const maxIdx=existForPlan.reduce((mx,e)=>Math.max(mx,e.meas_index),0);
+        parsed.nextIdx = maxIdx + 1;
+      }
       
       pendingFiles.push(parsed);
       
@@ -408,7 +436,7 @@ async function handleFiles(files){
       card.innerHTML=`
         <div class="color-swatch" style="background:${parsed.hex}"></div>
         <div class="preview-info">
-          <h4>${parsed.name} <span class="badge-count">${nextIdx}回目</span>${existCount>0?` <span style="font-size:11px;color:var(--sub)">(既に${existCount}回測定済み)</span>`:' <span style="font-size:11px;color:var(--yellow)">新規</span>'}</h4>
+          <h4>${parsed.name} <span class="badge-count">${parsed.nextIdx}回目</span>${existCount>0?` <span style="font-size:11px;color:var(--sub)">(${planId}: 既に${existCount}回測定済み)</span>`:' <span style="font-size:11px;color:var(--yellow)">新規</span>'}</h4>
           <p>L*=${parsed.lab.L.toFixed(1)} a*=${parsed.lab.a.toFixed(1)} b*=${parsed.lab.b.toFixed(1)} | sRGB(${parsed.srgb.r},${parsed.srgb.g},${parsed.srgb.b}) | ${parsed.hex}</p>
           <p>${parsed.deltaE_m0m1!=null?'ΔE(M0-M1)='+parsed.deltaE_m0m1.toFixed(3)+(parsed.deltaE_m0m1>0.3?' ⚠️蛍光':''):'M1なし'} | Serial: ${parsed.serial}</p>
         </div>
@@ -495,9 +523,13 @@ async function saveAll(btnEl){
 
 // === Median Computation & Plan Status ===
 async function computeMedianAndUpdatePlan(sampleName){
-  // Fetch all measurements for this sample
-  const{data}=await sb.from('iroca_measurements').select('m0_spectrum,lab_l,lab_a,lab_b').eq('sample_name',sampleName).order('meas_index');
-  if(!data||data.length===0)return;
+  // Group all measurements for this plan sample (a01, a01-1, a01-2 all → planId "a01")
+  const planId=extractPlanId(sampleName);
+  
+  // Fetch ALL measurements, then filter by planId
+  const{data:allData}=await sb.from('iroca_measurements').select('sample_name,meas_index,m0_spectrum,lab_l,lab_a,lab_b').order('meas_index');
+  const data=(allData||[]).filter(d=>extractPlanId(d.sample_name)===planId);
+  if(data.length===0)return;
   
   const n=data.length;
   
@@ -515,17 +547,15 @@ async function computeMedianAndUpdatePlan(sampleName){
   const rgb=labToSrgb(medL,medA,medB);
   const hex=`#${rgb.r.toString(16).padStart(2,'0')}${rgb.g.toString(16).padStart(2,'0')}${rgb.b.toString(16).padStart(2,'0')}`;
   
-  // Upsert into summary
+  // Upsert into summary (keyed by planId)
   await sb.from('iroca_sample_summary').upsert({
-    sample_name:sampleName, median_spectrum:medSpec,
+    sample_name:planId, median_spectrum:medSpec,
     median_lab_l:medL, median_lab_a:medA, median_lab_b:medB,
     srgb_r:rgb.r, srgb_g:rgb.g, srgb_b:rgb.b, hex_color:hex,
     measurement_count:n, updated_at:new Date().toISOString()
   },{onConflict:'sample_name'});
   
-  // Update experiment plan status if this sample matches a plan entry
-  // Extract plan ID: "a01-1" → "a01", legacy "A-01_xxx" → "a01"
-  const planId=extractPlanId(sampleName);
+  // Update experiment plan status
   if(planId){
     await sb.from('iroca_experiment_plan').update({status:'measured'}).eq('id',planId);
   }
@@ -725,11 +755,12 @@ async function loadData(){
     if(planIds.has(prefix)&&!matchedPlanIds.has(prefix)){matchedPlanIds.add(prefix);matchedPlanCount++;}
   }
   
-  // Anomaly detection: group by sample, check intra-sample variance
+  // Anomaly detection: group by plan sample ID (not raw sample_name for legacy compat)
   const bySample={};
   for(const d of data){
-    if(!bySample[d.sample_name])bySample[d.sample_name]=[];
-    bySample[d.sample_name].push(d);
+    const planId=extractPlanId(d.sample_name);
+    if(!bySample[planId])bySample[planId]=[];
+    bySample[planId].push(d);
   }
   const anomalyMap={};  // id → 'warn'|'error'|null
   for(const[name,rows] of Object.entries(bySample)){
@@ -765,7 +796,7 @@ async function loadData(){
     const flag=anomalyMap[d.id];
     const rowClass=flag==='error'?'row-error':flag==='warn'?'row-warn':'';
     const flagIcon=flag==='error'?'🔴':flag==='warn'?'⚠️':'';
-    const measCount=bySample[d.sample_name]?.length||0;
+    const measCount=bySample[extractPlanId(d.sample_name)]?.length||0;
     return `<tr class="${rowClass}">
     <td onclick="event.stopPropagation()"><input type="checkbox" class="chk row-chk" data-id="${d.id}" onchange="toggleRowSelect(this)"></td>
     <td><span class="swatch-sm" style="background:${d.hex_color||'#333'}"></span></td>
@@ -902,12 +933,13 @@ async function loadPlan(){
     }
     if(hasAnomaly) anomalyCount++;
     
-    // Measurement dots (up to 5)
+    // Measurement dots (up to 5) — show by measurement count, sorted by meas_index
+    const sortedMeas=[...meas].sort((a,b)=>a.meas_index-b.meas_index);
     let dots='';
-    for(let i=1;i<=5;i++){
-      const m=meas.find(x=>x.meas_index===i);
+    for(let i=0;i<5;i++){
+      const m=sortedMeas[i];
       const cls=m?(m.delta_e_m0m1>1.0?'error':m.delta_e_m0m1>0.3?'warn':'filled'):'';
-      dots+=`<span class="plan-dot ${cls}" title="${m?'測定'+i+'回目':'未測定'}"></span>`;
+      dots+=`<span class="plan-dot ${cls}" title="${m?m.sample_name+' ('+m.meas_index+'回目)':'未測定'}"></span>`;
     }
     
     const statusText=hasAnomaly?'🔴 要再測定':hasWarn?'⚠️ 要確認':count>=5?'✅ 完了(5回)':count>0?`📊 ${count}回測定`:'⏳ 未測定';
