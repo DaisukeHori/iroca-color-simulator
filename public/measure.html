@@ -121,6 +121,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .plan-dot.filled{background:var(--green)}
 .plan-dot.warn{background:var(--yellow)}
 .plan-dot.error{background:var(--accent)}
+.plan-row{cursor:pointer;transition:background 0.15s}
+.plan-row:hover{background:rgba(10,61,98,0.06) !important}
 </style>
 </head>
 <body>
@@ -917,18 +919,20 @@ async function loadPlan(){
     
     // Anomaly check for this plan sample
     let hasAnomaly=false, hasWarn=false;
+    const reasons=[];
     for(const m of meas){
-      if(m.delta_e_m0m1 && m.delta_e_m0m1 > 1.0) hasAnomaly=true;
-      else if(m.delta_e_m0m1 && m.delta_e_m0m1 > 0.3) hasWarn=true;
+      if(m.delta_e_m0m1 && m.delta_e_m0m1 > 1.0){hasAnomaly=true;reasons.push(`${m.sample_name}: ΔE(M0-M1)=${m.delta_e_m0m1.toFixed(3)} > 1.0 光漏れ`);}
+      else if(m.delta_e_m0m1 && m.delta_e_m0m1 > 0.3){hasWarn=true;reasons.push(`${m.sample_name}: ΔE(M0-M1)=${m.delta_e_m0m1.toFixed(3)} > 0.3 蛍光疑い`);}
     }
     // Intra-sample variance check
+    let sdVal=0;
     if(count>=2){
       const Ls=meas.filter(m=>m.lab_l!=null).map(m=>m.lab_l);
       if(Ls.length>=2){
         const mean=Ls.reduce((a,b)=>a+b)/Ls.length;
-        const sd=Math.sqrt(Ls.reduce((s,v)=>s+(v-mean)**2,0)/(Ls.length-1));
-        if(sd>2.0) hasAnomaly=true;
-        else if(sd>1.0) hasWarn=true;
+        sdVal=Math.sqrt(Ls.reduce((s,v)=>s+(v-mean)**2,0)/(Ls.length-1));
+        if(sdVal>3.0){hasAnomaly=true;reasons.push(`L*のSD=${sdVal.toFixed(2)} > 3.0 測定位置ムラ大`);}
+        else if(sdVal>2.0){hasWarn=true;reasons.push(`L*のSD=${sdVal.toFixed(2)} > 2.0 やや測定バラつき`);}
       }
     }
     if(hasAnomaly) anomalyCount++;
@@ -942,10 +946,11 @@ async function loadPlan(){
       dots+=`<span class="plan-dot ${cls}" title="${m?m.sample_name+' ('+m.meas_index+'回目)':'未測定'}"></span>`;
     }
     
+    const reasonTip=reasons.length>0?reasons.join('\n'):(count>=5?'全5回測定完了':count>0?`${count}回測定済み`:'未測定');
     const statusText=hasAnomaly?'🔴 要再測定':hasWarn?'⚠️ 要確認':count>=5?'✅ 完了(5回)':count>0?`📊 ${count}回測定`:'⏳ 未測定';
     const statusClass=hasAnomaly?'status-pending':count>0?'status-measured':'status-pending';
     
-    return `<tr style="${hasAnomaly?'background:rgba(196,32,52,0.06)':hasWarn?'background:rgba(234,179,8,0.04)':''}">
+    return `<tr style="${hasAnomaly?'background:rgba(196,32,52,0.06)':hasWarn?'background:rgba(234,179,8,0.04)':''}" title="${reasonTip.replace(/"/g,'&quot;')}" onclick="showPlanDetail('${d.id}')" class="plan-row">
       <td>${d.seq_no}</td><td style="font-weight:600">${d.id}</td><td>${d.phase}</td>
       <td>${d.drug}</td><td>${d.ratio||'—'}</td><td>${d.hair_type}</td><td style="font-size:11px">${d.purpose||''}</td>
       <td><span class="plan-meas-bar">${dots}</span></td>
@@ -955,6 +960,12 @@ async function loadPlan(){
   
   document.getElementById('planProgress').innerHTML=`進捗: <strong>${measuredCount}/${planData.length}</strong> (${(measuredCount/planData.length*100).toFixed(0)}%)${anomalyCount>0?` | <span style="color:var(--accent)">🔴 ${anomalyCount}件 要再測定</span>`:''}`;
   document.getElementById('planBody').innerHTML=rows;
+}
+
+// === Plan Detail: click row → switch to data tab with filter ===
+function showPlanDetail(planId){
+  document.getElementById('filterName').value=planId;
+  showPanel('data');
 }
 
 // === Export ===
