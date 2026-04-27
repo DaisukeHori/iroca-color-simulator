@@ -126,7 +126,7 @@ body{font-family:var(--fb);background:var(--rc);color:var(--rt);font-size:13px;l
 </div><div id="mE"></div></div>
 <div id="simView" style="display:none"><div class="st">Mixing Simulator</div><div class="ss">薬剤と比率を自由に設定 ─ 白髪率による発色変化もリアルタイム確認</div><div class="dv"></div>
 <div class="sb"><h3>調合設定</h3><div id="sSlots"></div><button class="sad" onclick="addS()">＋ 薬剤を追加</button>
-<div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:11px;color:var(--rg)">予測仕上がりLv:</span><span id="sLvAuto" style="padding:2px 8px;border:1px solid var(--rb);border-radius:4px;font-size:13px;font-weight:700;color:var(--rr);background:#fff;cursor:help;min-width:50px;display:inline-block;text-align:center" title="K-Mで予測した混色のL*値から、IROCAカタログ全434色のLv↔L*回帰式（白髪率別、線形補間）を使って自動計算">—</span><span style="font-size:10px;color:var(--rg)" id="sLvNote">L*から自動計算</span></div>
+<div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:11px;color:var(--rg)">予測仕上がりLv:</span><span id="sLvAuto" style="padding:2px 8px;border:1px solid var(--rb);border-radius:4px;font-size:13px;font-weight:700;color:var(--rr);background:#fff;cursor:help;min-width:50px;display:inline-block;text-align:center" title="K-Mで予測した混色のL*から、IROCAカタログ全434色×全gw値での統一線形回帰式 Lv = 0.20×L* + 3.19 で算出（白髪率非依存）">—</span><span style="font-size:10px;color:var(--rg)" id="sLvNote">L*から自動計算</span></div>
 <div style="margin-top:8px"><span style="font-size:11px;color:var(--rg)">プリセット:</span></div><div id="prs" style="margin-top:4px;display:flex;flex-wrap:wrap;gap:3px"></div></div>
 <div class="sb"><h3>シミュレーション結果</h3>
 <div class="cmp" id="sCmp"></div>
@@ -903,32 +903,15 @@ function cS(){
   document.getElementById('sNr').innerHTML=ch;
 }
 
-// === v5: L*→仕上がりLv変換 ===
-// IROCAカタログ全434レシピを使ってK-M予測L*とカタログLvの回帰を白髪率別に取得済み
-// 白髪率は線形補間
-const LEVEL_FIT_ANCHORS=[
-  {wh:0,   slope:0.6698, intercept:-3.522, r2:0.526},
-  {wh:30,  slope:0.5090, intercept:-2.112, r2:0.587},
-  {wh:50,  slope:0.4455, intercept:-1.047, r2:0.631},
-  {wh:80,  slope:0.2176, intercept: 2.041, r2:0.545},
-  {wh:100, slope:0.1545, intercept: 3.264, r2:0.560},
-];
-function labLToLevel(Lstar, whitePct){
-  const A=LEVEL_FIT_ANCHORS;
-  let slope, intercept;
-  if(whitePct<=A[0].wh){slope=A[0].slope;intercept=A[0].intercept;}
-  else if(whitePct>=A[A.length-1].wh){slope=A[A.length-1].slope;intercept=A[A.length-1].intercept;}
-  else {
-    for(let i=0;i<A.length-1;i++){
-      if(A[i].wh<=whitePct && whitePct<=A[i+1].wh){
-        const t=(whitePct-A[i].wh)/(A[i+1].wh-A[i].wh);
-        slope=A[i].slope*(1-t)+A[i+1].slope*t;
-        intercept=A[i].intercept*(1-t)+A[i+1].intercept*t;
-        break;
-      }
-    }
-  }
-  return slope*Lstar+intercept;
+// === v5.1: L*→仕上がりLv変換（単一固定式） ===
+// IROCAカタログ全434レシピ × 全gw値(0/10/.../100) = 4774データ点での統一線形回帰結果
+// Lv = 0.1998 * L* + 3.187 (R²=0.34, RMSE=1.26 - カタログ表記自体のノイズに起因)
+// 白髪率に依存しない単一式 → L*が単調なら自動的にLvも単調になる
+// 旧v5の白髪率別係数補間は、L*が同じでもgwで結果が変わる不自然さがあったため廃止
+const LEVEL_SLOPE = 0.1998;
+const LEVEL_INTERCEPT = 3.187;
+function labLToLevel(Lstar){
+  return LEVEL_SLOPE * Lstar + LEVEL_INTERCEPT;
 }
 function updateAutoLevel(res, comps){
   const el=document.getElementById('sLvAuto');
@@ -954,7 +937,7 @@ function updateAutoLevel(res, comps){
   } else {
     el.textContent='—';if(note)note.textContent='計算不可';return;
   }
-  const lv=labLToLevel(Lstar, gw);
+  const lv=labLToLevel(Lstar);
   const lvClipped=Math.max(3, Math.min(15, lv));
   el.textContent=lvClipped.toFixed(1);
   // Color hint
@@ -964,7 +947,7 @@ function updateAutoLevel(res, comps){
   else el.style.color='#D4A574';
   if(note){
     const method=(res.method==='spectral-km')?'K-M':'画像推定';
-    note.textContent=`L*=${Lstar.toFixed(1)} (${method}) 白髪${gw}%補間`;
+    note.textContent=`L*=${Lstar.toFixed(1)} (${method}) 白髪${gw}%`;
   }
 }
 function ldS(n){

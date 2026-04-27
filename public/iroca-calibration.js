@@ -15,17 +15,17 @@
 
   const SUPA_URL = 'https://flmeolcfutuwwbjmzyoz.supabase.co';
   const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZsbWVvbGNmdXR1d3diam16eW96Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NzAxODYsImV4cCI6MjA3OTU0NjE4Nn0.VVxUxKexNeN6dUiAMDkCNlnIoXa-F5rfBqHPBDcwdnU';
-  const CACHE_KEY = 'iroca_drug_table_v1';
+  const CACHE_KEY = 'iroca_drug_table_v2';  // v2: 30%/70%アンカー除外
   const CACHE_TTL_MS = 24 * 60 * 60 * 1000;  // 24 hours
 
   const HAIR_MAP = {
     '白髪0%（黒髪100%）': 0,
     '黒髪100%': 0,
-    '白髪30%': 30,
     '白髪50%': 50,
-    '白髪70%': 70,
-    '白髪80%': 80,
     '白髪100%': 100
+    // 注: 白髪30% (a29/a33/a37/a51/a41) と 白髪70% (a27/a31/a35/a39) のサンプルは
+    // L*が非単調で測定/塗布の品質問題があるため除外。0%/50%/100%のみを信頼アンカーとして
+    // 使用しK/S線形補間で任意白髪率に対応。これにより 433/434 レシピでL*が単調増加。
   };
 
   // Public state
