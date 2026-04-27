@@ -182,6 +182,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
           <th style="width:32px"><input type="checkbox" class="chk" id="selectAll" onchange="toggleSelectAll(this.checked)"></th>
           <th>色</th>
           <th class="sortable" onclick="setSort('sample_name')">サンプル名</th>
+          <th>配合</th>
+          <th>比率</th>
+          <th>毛束</th>
           <th class="sortable" onclick="setSort('meas_index')">回</th>
           <th>ロット</th>
           <th class="sortable" onclick="setSort('lab_l')">L*</th>
@@ -639,6 +642,7 @@ let sortCol = 'created_at';
 let sortDir = 'desc';
 let selectedIds = new Set();
 let tableData = [];  // store for modal access
+let planMap = {};    // planId → {drug, ratio, hair_type} for inline display
 
 function setSort(col){
   if(sortCol === col) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
@@ -706,6 +710,8 @@ function openDetail(id){
   
   const lot = extractLot(d.sample_name);
   const measNum = extractMeasNum(d.sample_name);
+  const planId = extractPlanId(d.sample_name);
+  const plan = planMap[planId];
   
   document.getElementById('detailColor').style.background = d.hex_color || '#333';
   document.getElementById('detailName').innerHTML = d.sample_name + ' (#' + d.meas_index + ')'
@@ -715,7 +721,12 @@ function openDetail(id){
   const lum = (d.lab_l || 0);
   document.getElementById('detailName').style.color = lum > 50 ? '#000' : '#fff';
   
+  const recipeBlock = plan
+    ? `<div class="modal-item"><div class="lbl">配合 / 比率 / 毛束</div><div class="val" style="font-size:13px"><strong>${plan.drug||'—'}</strong> / ${plan.ratio||'—'} / ${plan.hair_type||'—'}</div></div>`
+    : `<div class="modal-item"><div class="lbl">配合 / 比率 / 毛束</div><div class="val" style="color:var(--sub);font-size:11px">実験計画に未登録 (planId=${planId})</div></div>`;
+  
   document.getElementById('detailGrid').innerHTML = `
+    ${recipeBlock}
     <div class="modal-item"><div class="lbl">L* (明度)</div><div class="val">${d.lab_l?.toFixed(4) ?? '—'}</div></div>
     <div class="modal-item"><div class="lbl">a* (赤↔緑)</div><div class="val">${d.lab_a?.toFixed(4) ?? '—'}</div></div>
     <div class="modal-item"><div class="lbl">b* (黄↔青)</div><div class="val">${d.lab_b?.toFixed(4) ?? '—'}</div></div>
@@ -816,8 +827,13 @@ async function loadData(){
   document.getElementById('selectAll').checked = false;
   
   // Correct progress: count only samples matching experiment plan IDs
-  const{data:planData}=await sb.from('iroca_experiment_plan').select('id');
+  // Also fetch drug/ratio/hair_type for inline display
+  const{data:planData}=await sb.from('iroca_experiment_plan').select('id,drug,ratio,hair_type');
   const planIds=new Set((planData||[]).map(p=>p.id));
+  planMap={};  // reset and refill the global map
+  for(const p of (planData||[])){
+    planMap[p.id]={drug:p.drug, ratio:p.ratio, hair_type:p.hair_type};
+  }
   const uniqueSamples=new Set(data.map(d=>d.sample_name));
   // Match: sample_name → plan ID (e.g. "a01-1" → "a01")
   let matchedPlanCount=0;
@@ -874,15 +890,24 @@ async function loadData(){
     const flag=anomalyMap[d.id];
     const rowClass=flag==='error'?'row-error':flag==='warn'?'row-warn':'';
     const flagIcon=flag==='error'?'🔴':flag==='warn'?'⚠️':'';
-    const measCount=bySample[extractPlanId(d.sample_name)]?.length||0;
+    const planId=extractPlanId(d.sample_name);
+    const measCount=bySample[planId]?.length||0;
     const lot=extractLot(d.sample_name);
     const lotBadge=lot===1
       ? '<span style="font-size:10px;color:var(--sub)">lot1</span>'
       : `<span style="font-size:10px;color:var(--accent);font-weight:700;background:rgba(255,90,90,.1);padding:1px 6px;border-radius:3px">lot${lot}</span>`;
+    // Plan info (drug / ratio / hair_type)
+    const plan=planMap[planId];
+    const drugCell=plan?.drug ? `<span style="font-size:11px;font-weight:600">${plan.drug}</span>` : '<span style="color:var(--sub);font-size:10px">—</span>';
+    const ratioCell=plan?.ratio ? `<span style="font-size:11px;color:var(--sub)">${plan.ratio}</span>` : '<span style="color:var(--sub);font-size:10px">—</span>';
+    const hairCell=plan?.hair_type ? `<span style="font-size:11px;color:var(--sub)">${plan.hair_type}</span>` : '<span style="color:var(--sub);font-size:10px">—</span>';
     return `<tr class="${rowClass}">
     <td onclick="event.stopPropagation()"><input type="checkbox" class="chk row-chk" data-id="${d.id}" onchange="toggleRowSelect(this)"></td>
     <td><span class="swatch-sm" style="background:${d.hex_color||'#333'}"></span></td>
     <td style="font-weight:600;cursor:pointer" onclick="openDetail(${d.id})">${d.sample_name} ${flagIcon}<span class="badge-count">${measCount}回</span></td>
+    <td>${drugCell}</td>
+    <td>${ratioCell}</td>
+    <td>${hairCell}</td>
     <td>${d.meas_index}</td>
     <td>${lotBadge}</td>
     <td>${d.lab_l?.toFixed(2)||'—'}</td>
