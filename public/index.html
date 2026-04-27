@@ -6,6 +6,8 @@
 <title>INNO IROCA カラーレシピ＆調合シミュレーター v4 | REVOL</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Cormorant+Garamond:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="iroca-colorlib.js"></script>
+<script src="iroca-calibration.js" defer></script>
 <style>
 :root{--rr:#C42034;--rd:#2C2C2C;--rt:#3A3A3A;--rl:#F8F6F3;--rc:#FAF8F5;--rb:#E8E4DE;--rg:#9A9590;--rw:#8B7355;--fd:'Cormorant Garamond',serif;--fb:'Noto Sans JP',sans-serif}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -88,7 +90,7 @@ body{font-family:var(--fb);background:var(--rc);color:var(--rt);font-size:13px;l
 </style>
 </head>
 <body>
-<div class="hdr"><div><div class="logo">INNO <span>IROCA</span></div><div class="sub">カラーレシピ＆調合シミュレーター v4 ─ REVOL</div></div><div style="font-size:10px;color:var(--rg)">434色 ─ 13薬剤(Racc対応) ─ 白髪率対応</div></div>
+<div class="hdr"><div><div class="logo">INNO <span>IROCA</span></div><div class="sub">カラーレシピ＆調合シミュレーター v5 ─ REVOL</div></div><div id="calBadge" style="font-size:10px;color:var(--rg);text-align:right;line-height:1.5;cursor:pointer" onclick="showCalDetail()">434色 ─ 13薬剤(Racc対応) ─ 白髪率対応<br><span style="color:#bbb">校正データ読込中...</span></div></div>
 <div class="nav">
 <button class="nb active" onclick="sw('list')">カラーリスト</button>
 <button class="nb" onclick="sw('matrix')">マトリクス</button>
@@ -181,6 +183,58 @@ const BC = {
 
 let gw=30; // global white hair %
 
+// === v5: 校正データロード時の自動再計算 ===
+window.addEventListener('iroca:cal-ready', function(ev){
+  updateCalBadge(ev.detail);
+  if(typeof R !== 'undefined' && typeof compute === 'function'){
+    R.forEach(r=>compute(r));
+    if(typeof render === 'function') render();
+    if(typeof cS === 'function') cS();
+  }
+});
+
+function updateCalBadge(detail){
+  const el=document.getElementById('calBadge');
+  if(!el) return;
+  const m=window.CAL_META;
+  if(!m){
+    el.innerHTML='434色 ─ 13薬剤 ─ 白髪率対応<br><span style="color:#999">画像推定値モード</span>';
+    return;
+  }
+  const dt=m.lastUpdated?new Date(m.lastUpdated):null;
+  const dts=dt?dt.toISOString().slice(0,10):'?';
+  const tag=m.source==='supabase'?'<span style="color:#2a9d3f;font-weight:700">●実測校正</span>':
+            m.source==='cache'?'<span style="color:#7a9d3f;font-weight:700">●キャッシュ</span>':
+            '<span style="color:#999">画像推定値</span>';
+  el.innerHTML='434色 ─ 13薬剤 ─ 白髪率対応<br>'+
+               tag+' '+m.drugCount+'薬剤×'+m.sampleCount+'測定点 ('+dts+')';
+}
+
+function showCalDetail(){
+  const m=window.CAL_META;
+  if(!m){alert('校正データ読込中...');return;}
+  const lines=[];
+  lines.push('=== IROCA カラー校正状態 ===');
+  lines.push('データソース: '+(m.source==='supabase'?'Supabase（実測）':m.source==='cache'?'ローカルキャッシュ':'画像推定値（フォールバック）'));
+  lines.push('校正済み薬剤: '+m.drugCount);
+  lines.push('総測定点数: '+m.sampleCount);
+  if(m.lastUpdated)lines.push('最終測定日時: '+new Date(m.lastUpdated).toLocaleString('ja-JP'));
+  if(m.fetchedAt)lines.push('取得日時: '+new Date(m.fetchedAt).toLocaleString('ja-JP'));
+  if(window.DRUG_TABLE){
+    lines.push('');
+    lines.push('薬剤別カバレッジ:');
+    for(const drug of Object.keys(window.DRUG_TABLE).sort()){
+      const lv=window.DRUG_TABLE[drug];
+      const keys=Object.keys(lv).map(Number).sort((a,b)=>a-b);
+      lines.push('  '+drug+': 白髪率 '+keys.join(', ')+'%');
+    }
+  }
+  lines.push('');
+  lines.push('混色モデル: 単一定数Kubelka-Munk (K/S線形和→反射率逆変換)');
+  lines.push('検証実績: Phase B 39サンプルで mean ΔE₀₀=2.64 (現行モデル7.59から65%改善)');
+  alert(lines.join('\n'));
+}
+
 function setGW(v){
   gw=parseInt(v);document.getElementById('gwSlider').value=gw;document.getElementById('gwVal').textContent=gw+'%';
   document.querySelectorAll('.gw-btn').forEach(b=>b.classList.toggle('on',parseInt(b.textContent)===gw));
@@ -210,15 +264,44 @@ function mixC(comps,whPct){
 }
 function cl(v){return Math.max(0,Math.min(255,Math.round(v)));}
 
+// === v5: spectral Kubelka-Munk path ===========================================
+// 実測スペクトル(Phase A)が iroca-calibration.js 経由で window.DRUG_TABLE に注入される。
+// 全薬剤がキャリブレーション済みのレシピは K-M 経路で計算（mean ΔE=2.64, Phase B検証済）。
+// 未キャリブレーション薬剤を含むレシピは旧来の log-RGB 経路にフォールバック。
 function computeRaw(comps,whPct){
-  if(!comps.length)return{hex:'#282420',rgb:[40,36,32],steps:''};
-  const m=mixC(comps,whPct);let[r,g,b]=[m.r,m.g,m.b];
+  if(!comps.length)return{hex:'#282420',rgb:[40,36,32],steps:'',method:'empty'};
+  const wh=whPct!=null?whPct:gw;
+
+  // Try spectral K-M path
+  if(window.IROCACalibration && window.IROCAColor && window.DRUG_TABLE){
+    const km=window.IROCACalibration.mixSpectralKM(comps, wh);
+    if(km){
+      const r=cl(km.r), g=cl(km.g), b=cl(km.b);
+      let s='';
+      for(const c of comps){
+        const lv=window.DRUG_TABLE[c.code];
+        const sp=lv?window.IROCAColor.getDrugSpectrumAt(lv, wh):null;
+        const lab=sp?window.IROCAColor.reflectanceToLab(sp):null;
+        if(lab){
+          const lr=window.IROCAColor.labToSrgb(lab);
+          s+=c.code+'(L*='+lab[0].toFixed(1)+',a*='+lab[1].toFixed(1)+',b*='+lab[2].toFixed(1)+' / RGB '+lr.join(',')+')×'+c.weight+'\n';
+        } else {
+          s+=c.code+' (実測なし)×'+c.weight+'\n';
+        }
+      }
+      s+='白髪率:'+wh+'% [Kubelka-Munk混色: K/S線形和] → Lab=('+km.lab[0].toFixed(1)+','+km.lab[1].toFixed(1)+','+km.lab[2].toFixed(1)+') sRGB=('+r+','+g+','+b+') '+km.hex;
+      return{hex:km.hex,rgb:[r,g,b],steps:s,method:'spectral-km',lab:km.lab};
+    }
+  }
+
+  // Fallback: legacy image-RGB log-mix
+  const m=mixC(comps,wh);let[r,g,b]=[m.r,m.g,m.b];
   const gm=0.97;r=Math.pow(r/255,1/gm)*255;g=Math.pow(g/255,1/gm)*255;b=Math.pow(b/255,1/gm)*255;
   r=cl(r);g=cl(g);b=cl(b);
   const hex='#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
   let s='';for(const d of m.ds)s+=d.code+'('+d.rgb.join(',')+')×'+d.w+'\n';
-  s+='白髪率:'+(whPct!=null?whPct:gw)+'% 混色→('+m.r.toFixed(0)+','+m.g.toFixed(0)+','+m.b.toFixed(0)+') γ0.97→('+r+','+g+','+b+') '+hex;
-  return{hex,rgb:[r,g,b],steps:s};
+  s+='白髪率:'+wh+'% [画像推定値+対数混色] → ('+m.r.toFixed(0)+','+m.g.toFixed(0)+','+m.b.toFixed(0)+') γ0.97→('+r+','+g+','+b+') '+hex;
+  return{hex,rgb:[r,g,b],steps:s,method:'legacy-rgb'};
 }
 
 function parseR(mx,rt){
