@@ -126,7 +126,7 @@ body{font-family:var(--fb);background:var(--rc);color:var(--rt);font-size:13px;l
 </div><div id="mE"></div></div>
 <div id="simView" style="display:none"><div class="st">Mixing Simulator</div><div class="ss">薬剤と比率を自由に設定 ─ 白髪率による発色変化もリアルタイム確認</div><div class="dv"></div>
 <div class="sb"><h3>調合設定</h3><div id="sSlots"></div><button class="sad" onclick="addS()">＋ 薬剤を追加</button>
-<div style="margin-top:8px;display:flex;align-items:center;gap:8px"><span style="font-size:11px;color:var(--rg)">仕上がりLv:</span><select id="sLv" onchange="cS()" style="padding:3px 7px;border:1px solid var(--rb);border-radius:4px;font-size:12px;background:#fff"><option>3</option><option>4</option><option>5</option><option>6</option><option selected>7</option><option>8</option><option>9</option><option>10</option></select></div>
+<div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:11px;color:var(--rg)">予測仕上がりLv:</span><span id="sLvAuto" style="padding:2px 8px;border:1px solid var(--rb);border-radius:4px;font-size:13px;font-weight:700;color:var(--rr);background:#fff;cursor:help;min-width:50px;display:inline-block;text-align:center" title="K-Mで予測した混色のL*値から、IROCAカタログ全434色のLv↔L*回帰式（白髪率別、線形補間）を使って自動計算">—</span><span style="font-size:10px;color:var(--rg)" id="sLvNote">L*から自動計算</span></div>
 <div style="margin-top:8px"><span style="font-size:11px;color:var(--rg)">プリセット:</span></div><div id="prs" style="margin-top:4px;display:flex;flex-wrap:wrap;gap:3px"></div></div>
 <div class="sb"><h3>シミュレーション結果</h3>
 <div class="cmp" id="sCmp"></div>
@@ -879,11 +879,14 @@ function rS(){
 function addS(){if(sSlots.length<6){sSlots.push({code:'B',weight:0.3});rS();cS();}}
 function cS(){
   const comps=sSlots.filter(s=>s.weight>0).map(s=>({code:s.code,weight:s.weight}));
-  const lv=document.getElementById('sLv').value;
   const res=computeRaw(comps);
   const r0=computeRaw(comps,0);
   const r100=computeRaw(comps,100);
   const tc=v=>((v[0]*.299+v[1]*.587+v[2]*.114)>70?'#222':'#fff');
+
+  // === v5: 仕上がりLv 自動計算 ===
+  // K-M予測L*から、IROCAカタログ434色を用いた白髪率別Lv↔L*回帰式（線形補間）でLv推定
+  updateAutoLevel(res, comps);
   
   document.getElementById('sCmp').innerHTML=`
     <div style="text-align:center"><div class="csw2" style="background:${r0.hex};color:${tc(r0.rgb)}">${r0.hex}</div><div class="clb">黒髪0%</div></div>
@@ -899,11 +902,76 @@ function cS(){
   let ch='';for(const d of dists)ch+=`<div class="sni" onclick="sD(${d.r.n})"><div class="nsw" style="background:${d.r.hex}"></div><div class="nlb">${d.r.name}</div></div>`;
   document.getElementById('sNr').innerHTML=ch;
 }
+
+// === v5: L*→仕上がりLv変換 ===
+// IROCAカタログ全434レシピを使ってK-M予測L*とカタログLvの回帰を白髪率別に取得済み
+// 白髪率は線形補間
+const LEVEL_FIT_ANCHORS=[
+  {wh:0,   slope:0.6698, intercept:-3.522, r2:0.526},
+  {wh:30,  slope:0.5090, intercept:-2.112, r2:0.587},
+  {wh:50,  slope:0.4455, intercept:-1.047, r2:0.631},
+  {wh:80,  slope:0.2176, intercept: 2.041, r2:0.545},
+  {wh:100, slope:0.1545, intercept: 3.264, r2:0.560},
+];
+function labLToLevel(Lstar, whitePct){
+  const A=LEVEL_FIT_ANCHORS;
+  let slope, intercept;
+  if(whitePct<=A[0].wh){slope=A[0].slope;intercept=A[0].intercept;}
+  else if(whitePct>=A[A.length-1].wh){slope=A[A.length-1].slope;intercept=A[A.length-1].intercept;}
+  else {
+    for(let i=0;i<A.length-1;i++){
+      if(A[i].wh<=whitePct && whitePct<=A[i+1].wh){
+        const t=(whitePct-A[i].wh)/(A[i+1].wh-A[i].wh);
+        slope=A[i].slope*(1-t)+A[i+1].slope*t;
+        intercept=A[i].intercept*(1-t)+A[i+1].intercept*t;
+        break;
+      }
+    }
+  }
+  return slope*Lstar+intercept;
+}
+function updateAutoLevel(res, comps){
+  const el=document.getElementById('sLvAuto');
+  const note=document.getElementById('sLvNote');
+  if(!el)return;
+  if(!comps.length){el.textContent='—';if(note)note.textContent='薬剤未選択';return;}
+  // Get L* from result; if K-M used, lab is in res; otherwise compute from RGB
+  let Lstar;
+  if(res.lab && typeof res.lab[0]==='number'){
+    Lstar=res.lab[0];
+  } else if(window.IROCAColor && res.rgb){
+    // sRGB(D65)→Lab(D50) for legacy path
+    const r=res.rgb[0]/255, g=res.rgb[1]/255, b=res.rgb[2]/255;
+    const lin=v=>v<=0.04045?v/12.92:Math.pow((v+0.055)/1.055,2.4);
+    const rl=lin(r),gl=lin(g),bl=lin(b);
+    const X=(0.4124564*rl+0.3575761*gl+0.1804375*bl)*100;
+    const Y=(0.2126729*rl+0.7151522*gl+0.0721750*bl)*100;
+    const Z=(0.0193339*rl+0.1191920*gl+0.9503041*bl)*100;
+    const X50=1.0478112*X+0.0228866*Y-0.0501270*Z;
+    const Y50=0.0295424*X+0.9904844*Y-0.0170491*Z;
+    const Z50=-0.0092345*X+0.0150436*Y+0.7521316*Z;
+    Lstar=window.IROCAColor.xyzToLab([X50,Y50,Z50])[0];
+  } else {
+    el.textContent='—';if(note)note.textContent='計算不可';return;
+  }
+  const lv=labLToLevel(Lstar, gw);
+  const lvClipped=Math.max(3, Math.min(15, lv));
+  el.textContent=lvClipped.toFixed(1);
+  // Color hint
+  if(lvClipped<5)el.style.color='#444';
+  else if(lvClipped<7)el.style.color='#8B5A2B';
+  else if(lvClipped<9)el.style.color='#C42034';
+  else el.style.color='#D4A574';
+  if(note){
+    const method=(res.method==='spectral-km')?'K-M':'画像推定';
+    note.textContent=`L*=${Lstar.toFixed(1)} (${method}) 白髪${gw}%補間`;
+  }
+}
 function ldS(n){
   const r=R.find(x=>x.n===n);if(!r)return;
   const comps=parseR(r.mix,r.ratio);sSlots=comps.map(c=>({...c}));
   if(!sSlots.length)sSlots=[{code:'N7',weight:1}];
-  document.getElementById('sLv').value=Math.round(parseFloat(r.level)||7);
+  // v5: 仕上がりLvは自動計算するため、書き戻し不要
   sw('sim');rS();cS();
 }
 const PRS=[
@@ -917,7 +985,7 @@ const PRS=[
   {name:'ハニーブロンド',s:[{code:'Y9',weight:1},{code:'R9',weight:0.3},{code:'L',weight:1}],lv:'10'},
 ];
 const pD=document.getElementById('prs');
-PRS.forEach(p=>{const b=document.createElement('button');b.className='ab';b.textContent=p.name;b.onclick=()=>{sSlots=p.s.map(s=>({...s}));document.getElementById('sLv').value=p.lv;rS();cS();};pD.appendChild(b);});
+PRS.forEach(p=>{const b=document.createElement('button');b.className='ab';b.textContent=p.name;b.onclick=()=>{sSlots=p.s.map(s=>({...s}));rS();cS();};pD.appendChild(b);});
 rS();cS();render();
 </script>
 </body></html
