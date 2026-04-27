@@ -35,13 +35,30 @@
   // ---------------------------------------------------------------
   // Fetch helpers
   // ---------------------------------------------------------------
-  async function supaFetch(table, params) {
+  async function supaFetch(table, params, retries = 3) {
     const url = `${SUPA_URL}/rest/v1/${table}?${params}`;
-    const r = await fetch(url, {
-      headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` }
-    });
-    if (!r.ok) throw new Error(`Supabase ${r.status}: ${await r.text()}`);
-    return r.json();
+    let lastErr;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const r = await fetch(url, {
+          headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` }
+        });
+        if (r.ok) return r.json();
+        // 5xx or 429: retry; others: bail
+        if (r.status >= 500 || r.status === 429) {
+          lastErr = new Error(`Supabase ${r.status}`);
+        } else {
+          throw new Error(`Supabase ${r.status}: ${await r.text()}`);
+        }
+      } catch (e) {
+        lastErr = e;
+      }
+      if (attempt < retries) {
+        const wait = Math.min(8000, 1000 * Math.pow(2, attempt));  // 1s, 2s, 4s, 8s
+        await new Promise(res => setTimeout(res, wait));
+      }
+    }
+    throw lastErr;
   }
 
   function loadCache() {
@@ -72,13 +89,16 @@
   // ---------------------------------------------------------------
   async function fetchAndBuild() {
     // Phase A 単品 plan rows
+    // NOTE: Avoid URL-encoded Japanese (e.g. ratio=eq.単品) in PostgREST query —
+    // it triggers "DNS cache overflow" 503 errors. Filter client-side instead.
     const plan = await supaFetch(
       'iroca_experiment_plan',
-      'select=id,drug,ratio,hair_type,status&phase=eq.A&ratio=eq.' + encodeURIComponent('単品') + '&status=eq.measured'
+      'select=id,drug,ratio,hair_type,status&phase=eq.A&status=eq.measured'
     );
     const planById = {};
     const wanted = new Set();
     for (const p of plan) {
+      if (p.ratio !== '単品') continue;  // client-side filter
       planById[p.id] = p;
       wanted.add(p.id);
     }
