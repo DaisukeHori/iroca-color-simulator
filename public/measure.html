@@ -273,6 +273,27 @@ const SUPA_URL = 'https://flmeolcfutuwwbjmzyoz.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZsbWVvbGNmdXR1d3diam16eW96Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NzAxODYsImV4cCI6MjA3OTU0NjE4Nn0.VVxUxKexNeN6dUiAMDkCNlnIoXa-F5rfBqHPBDcwdnU';
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 
+// === Pagination helper (overcomes PostgREST default 1000-row limit) ===
+// Use this whenever the table may exceed 1000 rows. Paginates via .range() until exhausted.
+// Usage: const all = await fetchAll('iroca_measurements', 'sample_name,meas_index', q => q.order('meas_index'));
+async function fetchAll(tableName, selectCols='*', applyFilters=null){
+  const PAGE=1000;
+  const out=[];
+  let from=0;
+  for(let safety=0; safety<50; safety++){  // hard cap at 50,000 rows
+    let q=sb.from(tableName).select(selectCols);
+    if(applyFilters)q=applyFilters(q);
+    q=q.range(from, from+PAGE-1);
+    const{data,error}=await q;
+    if(error){console.error('fetchAll error on '+tableName+':', error); break;}
+    if(!data||data.length===0)break;
+    out.push(...data);
+    if(data.length<PAGE)break;
+    from+=PAGE;
+  }
+  return out;
+}
+
 // === Plan ID + Lot extraction helpers ===
 // "a01-1"      → planId="a01", measNum=1, lot=1 (legacy)
 // "a01-1-2"    → planId="a01", measNum=1, lot=2
@@ -451,7 +472,7 @@ async function handleFiles(files){
       // Count existing measurements for this SAMPLE (grouped by plan ID)
       const planId=extractPlanId(parsed.name);
       const info=extractSampleInfo(file.name);
-      const{data:existing}=await sb.from('iroca_measurements').select('sample_name,meas_index').order('meas_index',{ascending:false});
+      const existing=await fetchAll('iroca_measurements','sample_name,meas_index',q=>q.order('meas_index',{ascending:false}));
       // Filter by planId (a01-1, a01-2, a01-1-2 all belong to plan "a01")
       const existForPlan=(existing||[]).filter(e=>extractPlanId(e.sample_name)===planId);
       const existCount=existForPlan.length;
@@ -577,8 +598,8 @@ async function computeMedianAndUpdatePlan(sampleName){
   // Group all measurements for this plan sample (a01, a01-1, a01-1-2 all → planId "a01")
   const planId=extractPlanId(sampleName);
   
-  // Fetch ALL measurements, then filter by planId
-  const{data:allData}=await sb.from('iroca_measurements').select('sample_name,meas_index,m0_spectrum,lab_l,lab_a,lab_b').order('meas_index');
+  // Fetch ALL measurements (paginated), then filter by planId
+  const allData=await fetchAll('iroca_measurements','sample_name,meas_index,m0_spectrum,lab_l,lab_a,lab_b',q=>q.order('meas_index'));
   const planMeasurements=(allData||[]).filter(d=>extractPlanId(d.sample_name)===planId);
   if(planMeasurements.length===0)return;
   
@@ -814,12 +835,13 @@ async function deleteMeasFromModal(id){
 async function loadData(){
   const nameFilter=document.getElementById('filterName').value;
   
-  let query=sb.from('iroca_measurements').select('*').order(sortCol, {ascending: sortDir === 'asc'});
-  if(sortCol !== 'meas_index') query = query.order('meas_index', {ascending: true});
-  if(nameFilter)query=query.ilike('sample_name','%'+nameFilter+'%');
-  
-  const{data,error}=await query;
-  if(error){console.error(error);return;}
+  // Paginated fetch (PostgREST default 1000-row limit would silently truncate)
+  const data=await fetchAll('iroca_measurements','*',q=>{
+    let qq=q.order(sortCol, {ascending: sortDir === 'asc'});
+    if(sortCol !== 'meas_index') qq = qq.order('meas_index', {ascending: true});
+    if(nameFilter) qq = qq.ilike('sample_name','%'+nameFilter+'%');
+    return qq;
+  });
   tableData = data || [];
   
   selectedIds.clear();
@@ -929,7 +951,7 @@ async function deleteMeas(id){
 let specChart=null;
 
 async function loadSampleList(){
-  const{data}=await sb.from('iroca_measurements').select('sample_name').order('sample_name');
+  const data=await fetchAll('iroca_measurements','sample_name',q=>q.order('sample_name'));
   if(!data)return;
   // Group by planId, count measurements per lot
   const planLotCounts={};
@@ -953,8 +975,8 @@ async function loadAnalysis(){
   const planId=document.getElementById('analysisSample').value;
   if(!planId)return;
   
-  // Fetch all measurements for this planId across all lots
-  const{data:allData}=await sb.from('iroca_measurements').select('*').order('meas_index');
+  // Fetch all measurements for this planId across all lots (paginated)
+  const allData=await fetchAll('iroca_measurements','*',q=>q.order('meas_index'));
   const data=(allData||[]).filter(d=>extractPlanId(d.sample_name)===planId);
   if(!data.length)return;
   
@@ -1080,8 +1102,8 @@ async function loadPlan(){
   const{data:planData,error}=await query;
   if(error||!planData){document.getElementById('planBody').innerHTML='<tr><td colspan="9">実験計画が未登録です</td></tr>';return;}
   
-  // Fetch all measurements to count per plan sample
-  const{data:allMeas}=await sb.from('iroca_measurements').select('sample_name,meas_index,delta_e_m0m1,lab_l');
+  // Fetch all measurements to count per plan sample (paginated to overcome 1000-row limit)
+  const allMeas=await fetchAll('iroca_measurements','sample_name,meas_index,delta_e_m0m1,lab_l');
   const measByPlan={};  // planId → [{...}]
   if(allMeas){
     for(const m of allMeas){
@@ -1154,8 +1176,8 @@ async function exportCSV(type){
   let csv='',filename='';
   
   if(type==='measurements'){
-    const{data}=await sb.from('iroca_measurements').select('*').order('sample_name').order('meas_index');
-    if(!data)return;
+    const data=await fetchAll('iroca_measurements','*',q=>q.order('sample_name').order('meas_index'));
+    if(!data||!data.length)return;
     const wlHeaders=WL.map(w=>'R_'+w).join(',');
     csv='sample_name,meas_index,lab_l,lab_a,lab_b,srgb_r,srgb_g,srgb_b,hex,delta_e_m0m1,device_serial,created_at,'+wlHeaders+'\n';
     csv+=data.map(d=>{
@@ -1165,8 +1187,8 @@ async function exportCSV(type){
     filename='iroca_measurements.csv';
   }
   else if(type==='spectra_raw'){
-    const{data}=await sb.from('iroca_measurements').select('sample_name,meas_index,m0_spectrum').order('sample_name').order('meas_index');
-    if(!data)return;
+    const data=await fetchAll('iroca_measurements','sample_name,meas_index,m0_spectrum',q=>q.order('sample_name').order('meas_index'));
+    if(!data||!data.length)return;
     csv='sample_name,meas_index,wavelength_nm,R\n';
     for(const d of data){
       if(!d.m0_spectrum)continue;
