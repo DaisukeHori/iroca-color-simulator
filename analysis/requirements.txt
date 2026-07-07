@@ -1,0 +1,10 @@
+# IROCA 視覚色解析パイプライン 依存ライブラリ
+# インストール: pip install -r requirements.txt
+rawpy>=0.24          # Panasonic RW2 デコード (LibRawラッパー)
+opencv-contrib-python>=4.8   # ColorChecker検出 (mccモジュール) ※opencv-pythonではなくcontrib必須
+colour-science>=0.4.4        # CCM計算 (RPCC), Lab変換, CIEDE2000
+numpy>=1.24
+tifffile>=2023.7     # 線形TIFF入出力
+pyyaml>=6.0          # 設定ファイル
+requests>=2.31       # Supabase REST API
+matplotlib>=3.7      # 確認画像の描画

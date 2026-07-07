@@ -1,0 +1,75 @@
+# =========================================================
+# IROCA 視覚色解析パイプライン 設定ファイル
+# =========================================================
+
+# --- 入力 ---
+raw_dir: "./raw"                 # RW2ファイルを置くディレクトリ
+raw_extension: ".RW2"            # 拡張子 (大文字小文字は自動判定)
+
+# --- 出力 ---
+output_dir: "./output"
+linear_tiff_dir: "./output/linear_tiff"
+check_image_dir: "./output/check_images"
+
+# --- RAW現像 (計測用リニア現像) ---
+decode:
+  use_camera_wb: true            # カメラ設定WB(太陽光固定)を使用
+  output_bps: 16                 # 16bit出力
+  gamma_power: 1.0               # ガンマ1.0 = リニア
+  gamma_slope: 1.0
+  no_auto_bright: true           # 自動明るさ補正OFF (計測では必須)
+  demosaic: "AHD"                # デモザイクアルゴリズム
+  half_size: false               # フル解像度
+
+# --- ColorChecker検出 ---
+chart:
+  detector: "mcc"                # "mcc" = OpenCV mccモジュール自動検出
+  # 自動検出失敗時は下記に画像ごとの4隅座標を記入して再実行
+  # 順序: 左上(茶パッチ側) → 右上 → 右下 → 左下(白パッチ側)
+  manual_corners: {}
+  #  例:
+  #  "a05.RW2":
+  #    - [812, 1450]   # 左上
+  #    - [2210, 1462]  # 右上
+  #    - [2195, 2380]  # 右下
+  #    - [798, 2366]   # 左下
+
+# --- CCM (カメラ→視覚色 補正行列) ---
+ccm:
+  method: "Finlayson 2015"       # Root-Polynomial (露出不変・推奨)
+  degree: 2                      # RPCC次数 (2で十分。3は40件では過学習リスク)
+  # 参照値: ColorChecker Classic (post-Nov2014) の公称Lab値を colour-science 内蔵データから使用
+  reference: "ColorChecker24 - After November 2014"
+
+# --- 棒巻き毛束の円筒解析 ---
+cylinder:
+  # 自動検出を先に試行し、確認画像を出力。失敗時は画像ごとに手動指定
+  # 座標系: ピクセル。棒はほぼ水平に写っている前提
+  manual_rods: {}
+  #  例:
+  #  "a05.RW2":
+  #    axis_y: 1980        # 棒の中心線のY座標
+  #    top_y: 1830         # 毛束上端のY座標
+  #    bottom_y: 2130      # 毛束下端のY座標
+  #    x_start: 900        # 解析範囲左端X
+  #    x_end: 2400         # 解析範囲右端X
+  angles_deg: [0, 15, 30, 45, 60]   # 抽出する角度 (±両側を平均)
+  band_halfwidth_deg: 6             # 各角度帯の半幅 (±6° の帯からサンプリング)
+  specular_percentile_cut: 80       # 輝度上位20%をスペキュラとして除外
+  min_pixels_per_band: 200          # 帯あたり最低ピクセル数 (下回ると警告)
+
+# --- 観測条件 (Lab変換) ---
+colorimetry:
+  illuminant: "D50"              # i1Pro 2 データ (D50/2°) と揃える
+  observer: "CIE 1931 2 Degree Standard Observer"
+
+# --- Supabase ---
+supabase:
+  url: "https://flmeolcfutuwwbjmzyoz.supabase.co"
+  # anon key はスクリプト実行時に環境変数 SUPABASE_KEY で渡す
+  table_shots: "iroca_calibration_shots"
+  table_summary: "iroca_sample_summary"
+
+# --- i1Pro 2 測定値の取得元 ---
+# 04_learn_correction.py が Supabase の iroca_sample_summary から
+# median_lab_l/a/b を読み込んでペアを作る

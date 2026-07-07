@@ -1,0 +1,5 @@
+raw/
+output/linear_tiff/
+output/check_images/
+config_test.yaml
+__pycache__/

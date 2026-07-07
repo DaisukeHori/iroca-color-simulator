@@ -1,0 +1,23 @@
+[
+ {
+  "file": "test_dark",
+  "status": "ok",
+  "mean_dE00": 0.3072427615718084,
+  "max_dE00": 1.8819909188942512,
+  "worst_patch": "cyan"
+ },
+ {
+  "file": "test_light",
+  "status": "ok",
+  "mean_dE00": 0.3041924007518111,
+  "max_dE00": 1.8823440821817983,
+  "worst_patch": "cyan"
+ },
+ {
+  "file": "test_red",
+  "status": "ok",
+  "mean_dE00": 0.30216501029039894,
+  "max_dE00": 1.8789691252178424,
+  "worst_patch": "cyan"
+ }
+]
