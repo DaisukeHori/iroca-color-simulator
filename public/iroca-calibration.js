@@ -199,6 +199,78 @@
   }
 
   // ---------------------------------------------------------------
+  // IROCAVisual — 視覚色補正モジュール
+  // Supabase iroca_correction_model から学習済み補正モデル
+  // (i1Pro2 Lab → 視覚Lab, 角度別アフィン) を取得して適用する。
+  // calibrate.html で「学習」を実行すると自動的に反映される。
+  // ---------------------------------------------------------------
+  const VISUAL_CACHE_KEY = 'iroca_visual_model_v1';
+  const VISUAL_CACHE_TTL = 60 * 60 * 1000; // 1時間キャッシュ
+
+  const IROCAVisual = {
+    model: null,
+    ready: false,
+
+    async fetch() {
+      // localStorage キャッシュ
+      try {
+        const c = JSON.parse(localStorage.getItem(VISUAL_CACHE_KEY) || 'null');
+        if (c && Date.now() - c.t < VISUAL_CACHE_TTL) {
+          this.model = c.model; this.ready = !!c.model;
+        }
+      } catch (e) { /* ignore */ }
+
+      try {
+        const r = await fetch(SUPA_URL +
+          '/rest/v1/iroca_correction_model?is_active=eq.true&select=model,created_at&order=created_at.desc&limit=1', {
+          headers: { apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY }
+        });
+        if (r.ok) {
+          const rows = await r.json();
+          this.model = rows.length ? rows[0].model : null;
+          this.ready = !!this.model;
+          localStorage.setItem(VISUAL_CACHE_KEY, JSON.stringify({ t: Date.now(), model: this.model }));
+        }
+      } catch (e) {
+        // ネットワーク失敗時はキャッシュのまま (無ければ補正なし)
+        console.warn('IROCAVisual: モデル取得失敗 (補正なしで続行)', e);
+      }
+      // UIに通知
+      try { global.dispatchEvent(new CustomEvent('iroca-visual-ready', { detail: { ready: this.ready } })); } catch (e) {}
+      return this.ready;
+    },
+
+    angles() {
+      return this.model ? this.model.angles_deg : [];
+    },
+
+    // i1Pro2系のLab → 指定角度の視覚Lab。モデルなし/角度なしなら null。
+    apply(lab, angleDeg) {
+      if (!this.model) return null;
+      const pa = this.model.per_angle[String(angleDeg)];
+      if (!pa) return null;
+      const A = pa.A, b = pa.b;
+      const out = [0, 0, 0];
+      for (let i = 0; i < 3; i++) {
+        out[i] = A[i][0] * lab[0] + A[i][1] * lab[1] + A[i][2] * lab[2] + b[i];
+      }
+      return out;
+    },
+
+    // Lab → sRGB hex (既存のColorライブラリを利用)
+    labToHex(lab) {
+      const C = global.IROCAColor;
+      if (!C) return null;
+      const rgb = C.labToSrgb(lab);
+      return { rgb, hex: C.rgbToHex(rgb) };
+    }
+  };
+
+  global.IROCAVisual = IROCAVisual;
+  // モデル取得はバックグラウンドで開始
+  IROCAVisual.fetch();
+
+  // ---------------------------------------------------------------
   // Auto-start
   // ---------------------------------------------------------------
   global.IROCACalibration = { init, mixSpectralKM, fetchAndBuild };

@@ -106,6 +106,15 @@ body{font-family:var(--fb);background:var(--rc);color:var(--rt);font-size:13px;l
 <button class="gw-btn" onclick="setGW(50)">50%</button>
 <button class="gw-btn" onclick="setGW(70)">70%</button>
 <button class="gw-btn" onclick="setGW(100)">100%</button>
+<span id="visualRow" style="display:none;margin-left:14px">
+<span style="font-size:10px;color:var(--rt)">👁 見え方:</span>
+<button class="gw-btn va-btn on" data-va="null" onclick="setVisualAngle(null)">計測値</button>
+<button class="gw-btn va-btn" data-va="0" onclick="setVisualAngle(0)">正面0°</button>
+<button class="gw-btn va-btn" data-va="15" onclick="setVisualAngle(15)">15°</button>
+<button class="gw-btn va-btn" data-va="30" onclick="setVisualAngle(30)">30°</button>
+<button class="gw-btn va-btn" data-va="45" onclick="setVisualAngle(45)">45°</button>
+<button class="gw-btn va-btn" data-va="60" onclick="setVisualAngle(60)">60°</button>
+</span>
 </div>
 <div class="sec">
 <div class="fr">
@@ -237,8 +246,30 @@ function showCalDetail(){
 
 function setGW(v){
   gw=parseInt(v);document.getElementById('gwSlider').value=gw;document.getElementById('gwVal').textContent=gw+'%';
-  document.querySelectorAll('.gw-btn').forEach(b=>b.classList.toggle('on',parseInt(b.textContent)===gw));
+  document.querySelectorAll('.gw-btn:not(.va-btn)').forEach(b=>b.classList.toggle('on',parseInt(b.textContent)===gw));
   R.forEach(r=>compute(r));render();cS();
+}
+
+// ===== 視覚色補正 (calibrate.htmlで学習したモデルの角度切替) =====
+let visualAngle = null;   // null = 計測値そのまま / 0,15,30,45,60 = 視覚色
+function setVisualAngle(a){
+  visualAngle = a;
+  document.querySelectorAll('.va-btn').forEach(b=>{
+    b.classList.toggle('on', String(a)===b.dataset.va || (a===null && b.dataset.va==='null'));
+  });
+  R.forEach(r=>compute(r));render();cS();
+}
+// 補正モデル取得完了時に角度UIを表示
+window.addEventListener('iroca-visual-ready', e=>{
+  if(e.detail && e.detail.ready){
+    const row=document.getElementById('visualRow');
+    if(row)row.style.display='inline';
+  }
+});
+// 読込タイミングにより既にreadyの場合
+if(window.IROCAVisual && window.IROCAVisual.ready){
+  const row=document.getElementById('visualRow');
+  if(row)row.style.display='inline';
 }
 
 function lerp(a,b,t){return a+(b-a)*t;}
@@ -276,6 +307,17 @@ function computeRaw(comps,whPct){
   if(window.IROCACalibration && window.IROCAColor && window.DRUG_TABLE){
     const km=window.IROCACalibration.mixSpectralKM(comps, wh);
     if(km){
+      // 視覚色補正 (calibrate.htmlで学習したモデルがある場合、角度指定時に適用)
+      if(visualAngle!=null && window.IROCAVisual && window.IROCAVisual.ready){
+        const vlab=window.IROCAVisual.apply(km.lab, visualAngle);
+        if(vlab){
+          const vh=window.IROCAVisual.labToHex(vlab);
+          if(vh){
+            km.lab=vlab; km.hex=vh.hex;
+            km.r=vh.rgb[0]; km.g=vh.rgb[1]; km.b=vh.rgb[2];
+          }
+        }
+      }
       const r=cl(km.r), g=cl(km.g), b=cl(km.b);
       let s='';
       for(const c of comps){

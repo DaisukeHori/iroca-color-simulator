@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IROCA 視覚色キャリブレーション</title>
+<style>
+:root{--bg:#f7f6f4;--card:#fff;--ink:#2d3436;--sub:#636e72;--accent:#e05a4e;--green:#2a9d5c;--yellow:#c98a1b;--line:#e0ddd8}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Hiragino Sans','Noto Sans JP',sans-serif;background:var(--bg);color:var(--ink);padding:16px;max-width:1100px;margin:0 auto}
+h1{font-size:20px;margin-bottom:4px}
+.sub{color:var(--sub);font-size:12px;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px}
+.card h2{font-size:15px;margin-bottom:10px;border-left:4px solid var(--accent);padding-left:8px}
+label{font-size:12px;color:var(--sub);display:block;margin:8px 0 2px}
+input[type=text],input[type=password]{width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;font-size:14px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>div{flex:1;min-width:180px}
+button{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:10px 18px;font-size:14px;cursor:pointer;margin-top:10px}
+button.secondary{background:#888}
+button:disabled{background:#ccc;cursor:default}
+#dropzone{border:2px dashed var(--line);border-radius:10px;padding:28px;text-align:center;color:var(--sub);cursor:pointer;margin-top:8px}
+#dropzone.on{border-color:var(--accent);color:var(--accent)}
+#canvasWrap{position:relative;margin-top:12px;display:none}
+#imgCanvas{width:100%;border-radius:8px;display:block;touch-action:none}
+.hint{font-size:11px;color:var(--sub);margin-top:6px;line-height:1.6}
+.warn{border-left:4px solid var(--yellow);background:#fdf6e8;padding:8px 10px;border-radius:4px;font-size:12px;margin-top:8px;line-height:1.6}
+.warn.error{border-color:var(--accent);background:#fdecea}
+.warn.action_required{border-color:var(--accent);background:#fdecea;font-weight:600}
+.warn .fix{color:var(--sub);font-weight:400;display:block;margin-top:2px}
+.swrow{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.sw{width:88px;text-align:center;font-size:11px}
+.sw .box{width:88px;height:60px;border-radius:6px;border:1px solid var(--line)}
+.sw .lab{color:var(--sub);margin-top:3px;line-height:1.4}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left}
+.ok{color:var(--green)} .ng{color:var(--accent)}
+#learnResult pre{background:#f4f2ef;padding:10px;border-radius:6px;font-size:11px;overflow:auto;margin-top:8px}
+.status{font-size:12px;margin-top:8px;color:var(--sub)}
+</style>
+</head>
+<body>
+<h1>📷 IROCA 視覚色キャリブレーション</h1>
+<p class="sub">棒巻き毛束＋ColorCheckerの写真をアップすると、角度別の視覚色を自動抽出してシミュレーターに反映します。RW2 / JPG / PNG / TIFF 対応。</p>
+
+<!-- 設定 -->
+<div class="card">
+  <h2>⚙️ 接続設定</h2>
+  <div class="row">
+    <div><label>解析サーバー URL</label><input type="text" id="apiUrl" placeholder="https://iroca-vision.appserver.tokyo"></div>
+    <div><label>APIキー</label><input type="password" id="apiKey" placeholder="iroca-vision-2026"></div>
+  </div>
+  <button class="secondary" onclick="saveSettings()">保存して接続テスト</button>
+  <span class="status" id="connStatus"></span>
+</div>
+
+<!-- アップロード -->
+<div class="card">
+  <h2>1️⃣ 写真アップロード</h2>
+  <div class="row">
+    <div><label>サンプルID (measure.htmlの計画IDと同じ)</label><input type="text" id="sampleId" placeholder="a05"></div>
+  </div>
+  <div id="dropzone">ここに写真をドロップ / タップして選択<input type="file" id="fileInput" accept=".rw2,.jpg,.jpeg,.png,.tif,.tiff,.dng" style="display:none"></div>
+  <div class="status" id="upStatus"></div>
+  <div id="upWarnings"></div>
+</div>
+
+<!-- 位置調整 -->
+<div class="card" id="editCard" style="display:none">
+  <h2>2️⃣ 位置確認・調整</h2>
+  <p class="hint">
+    🟩 <b>緑の4点</b> = ColorCheckerの四隅 (左上→右上→右下→左下の順)。ズレていたらドラッグで修正。<br>
+    🟦 <b>青の枠</b> = 毛束の解析範囲。上端/下端/左右をドラッグ。<b>緑の横線</b> = 棒の中心線。<br>
+    自動検出が失敗した場合も、ここで手動指定すればそのまま進めます。
+  </p>
+  <div id="canvasWrap"><canvas id="imgCanvas"></canvas></div>
+  <button onclick="runExtract()">3️⃣ 色を抽出して保存</button>
+  <div class="status" id="exStatus"></div>
+  <div id="exWarnings"></div>
+  <div id="result"></div>
+</div>
+
+<!-- 一覧と学習 -->
+<div class="card">
+  <h2>4️⃣ 処理済みサンプル / 補正モデル学習</h2>
+  <button class="secondary" onclick="loadSamples()">一覧を更新</button>
+  <button onclick="runLearn()">🧠 補正モデルを学習してシミュレーターに反映</button>
+  <div class="status" id="listStatus"></div>
+  <div id="sampleList"></div>
+  <div id="learnResult"></div>
+</div>
+
+<script>
+// ============ 設定 ============
+const $ = id => document.getElementById(id);
+let API = localStorage.getItem('iroca_vision_url') || '';
+let KEY = localStorage.getItem('iroca_vision_key') || '';
+$('apiUrl').value = API; $('apiKey').value = KEY;
+
+function saveSettings(){
+  API = $('apiUrl').value.replace(/\/+$/,'');
+  KEY = $('apiKey').value;
+  localStorage.setItem('iroca_vision_url', API);
+  localStorage.setItem('iroca_vision_key', KEY);
+  $('connStatus').textContent = '接続確認中...';
+  fetch(API + '/api/health').then(r=>r.json()).then(j=>{
+    $('connStatus').textContent = '✅ 接続OK (v' + j.version + ')';
+  }).catch(e=>{ $('connStatus').textContent = '❌ 接続失敗: ' + e.message; });
+}
+
+function showWarnings(el, warnings){
+  el.innerHTML = (warnings||[]).map(w =>
+    `<div class="warn ${w.level}">${w.message}${w.fix?`<span class="fix">💡 ${w.fix}</span>`:''}</div>`).join('');
+}
+
+// ============ アップロード ============
+let job = null;          // {job_id, preview_scale, img_size, ...}
+let chartPts = null;     // 原寸座標 4x2
+let rod = null;          // {axis_y, top_y, bottom_y, x_start, x_end} 原寸
+let previewImg = new Image();
+
+$('dropzone').onclick = ()=> $('fileInput').click();
+$('dropzone').ondragover = e=>{e.preventDefault();$('dropzone').classList.add('on');};
+$('dropzone').ondragleave = ()=> $('dropzone').classList.remove('on');
+$('dropzone').ondrop = e=>{e.preventDefault();$('dropzone').classList.remove('on');
+  if(e.dataTransfer.files.length) upload(e.dataTransfer.files[0]);};
+$('fileInput').onchange = e=>{ if(e.target.files.length) upload(e.target.files[0]); };
+
+async function upload(file){
+  const sid = $('sampleId').value.trim();
+  if(!sid){ alert('サンプルIDを入力してください (例: a05)'); return; }
+  if(!API){ alert('接続設定を先に保存してください'); return; }
+  $('upStatus').textContent = `⏳ アップロード中... (${(file.size/1e6).toFixed(1)}MB — RW2は処理に20〜60秒かかります)`;
+  $('upWarnings').innerHTML = ''; $('result').innerHTML = '';
+  const fd = new FormData();
+  fd.append('file', file); fd.append('sample_id', sid);
+  try{
+    const r = await fetch(API + '/api/upload', {method:'POST', headers:{'X-API-Key':KEY}, body: fd});
+    const j = await r.json();
+    if(!r.ok) throw new Error(j.detail || JSON.stringify(j).slice(0,200));
+    job = j;
+    // 自動検出結果 → 初期座標 (無ければ画像中央にデフォルト配置)
+    const W=j.img_size[0], H=j.img_size[1];
+    chartPts = j.auto_chart || [[W*0.55,H*0.1],[W*0.95,H*0.1],[W*0.95,H*0.45],[W*0.55,H*0.45]];
+    rod = j.auto_rod || {axis_y:Math.round(H*0.7), top_y:Math.round(H*0.6), bottom_y:Math.round(H*0.8),
+                         x_start:Math.round(W*0.1), x_end:Math.round(W*0.9)};
+    showWarnings($('upWarnings'), j.warnings);
+    $('upStatus').textContent = `✅ 解析準備完了 (${j.source_kind}) — 下で位置を確認してください`;
+    previewImg.onload = ()=>{ $('editCard').style.display='block'; $('canvasWrap').style.display='block'; draw(); };
+    previewImg.src = API + `/api/image/${j.job_id}/preview?t=` + Date.now();
+  }catch(e){
+    $('upStatus').textContent = '❌ ' + e.message;
+  }
+}
+
+// ============ Canvas 編集 ============
+const canvas = $('imgCanvas');
+const ctx = canvas.getContext('2d');
+let dragging = null;   // {type:'chart',i} | {type:'rod',key}
+
+function toCanvas(p){ const s = canvas.width / job.img_size[0]; return [p[0]*s, p[1]*s]; }
+function toImage(x,y){ const s = job.img_size[0] / canvas.width; return [x*s, y*s]; }
+
+function draw(){
+  canvas.width = previewImg.naturalWidth;
+  canvas.height = previewImg.naturalHeight;
+  ctx.drawImage(previewImg,0,0);
+  const s = canvas.width / job.img_size[0];
+  // 棒領域
+  ctx.strokeStyle='#2288ff'; ctx.lineWidth=3;
+  ctx.strokeRect(rod.x_start*s, rod.top_y*s, (rod.x_end-rod.x_start)*s, (rod.bottom_y-rod.top_y)*s);
+  ctx.strokeStyle='#22cc55'; ctx.beginPath();
+  ctx.moveTo(rod.x_start*s, rod.axis_y*s); ctx.lineTo(rod.x_end*s, rod.axis_y*s); ctx.stroke();
+  // ハンドル (棒: 上/中/下/左/右)
+  const handles = rodHandles();
+  ctx.fillStyle='#2288ff';
+  for(const h of handles){ ctx.beginPath(); ctx.arc(h.x*s,h.y*s,10,0,7); ctx.fill(); }
+  // チャート
+  ctx.strokeStyle='#22cc55'; ctx.lineWidth=3;
+  ctx.beginPath();
+  chartPts.forEach((p,i)=>{ const c=[p[0]*s,p[1]*s]; i?ctx.lineTo(c[0],c[1]):ctx.moveTo(c[0],c[1]); });
+  ctx.closePath(); ctx.stroke();
+  ctx.fillStyle='#22cc55';
+  chartPts.forEach((p,i)=>{ ctx.beginPath(); ctx.arc(p[0]*s,p[1]*s,12,0,7); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.font='bold 14px sans-serif'; ctx.textAlign='center';
+    ctx.fillText(i+1, p[0]*s, p[1]*s+5); ctx.fillStyle='#22cc55'; });
+}
+
+function rodHandles(){
+  const cx=(rod.x_start+rod.x_end)/2;
+  return [
+    {key:'top_y',    x:cx, y:rod.top_y},
+    {key:'axis_y',   x:cx, y:rod.axis_y},
+    {key:'bottom_y', x:cx, y:rod.bottom_y},
+    {key:'x_start',  x:rod.x_start, y:rod.axis_y},
+    {key:'x_end',    x:rod.x_end,   y:rod.axis_y},
+  ];
+}
+
+function pointerPos(e){
+  const rect = canvas.getBoundingClientRect();
+  const cx = (e.touches?e.touches[0].clientX:e.clientX) - rect.left;
+  const cy = (e.touches?e.touches[0].clientY:e.clientY) - rect.top;
+  // CSS縮小 → canvas座標
+  const kx = canvas.width / rect.width, ky = canvas.height / rect.height;
+  return toImage(cx*kx, cy*ky);
+}
+
+function hitTest(ix,iy){
+  const R = job.img_size[0] * 0.02;   // 原寸2%の当たり判定
+  for(let i=0;i<4;i++){
+    if(Math.hypot(chartPts[i][0]-ix, chartPts[i][1]-iy) < R) return {type:'chart', i};
+  }
+  for(const h of rodHandles()){
+    if(Math.hypot(h.x-ix, h.y-iy) < R) return {type:'rod', key:h.key};
+  }
+  return null;
+}
+
+function onDown(e){ if(!job)return; const [ix,iy]=pointerPos(e); dragging=hitTest(ix,iy); if(dragging)e.preventDefault(); }
+function onMove(e){
+  if(!dragging)return; e.preventDefault();
+  const [ix,iy]=pointerPos(e);
+  if(dragging.type==='chart'){ chartPts[dragging.i]=[ix,iy]; }
+  else{
+    const k=dragging.key;
+    if(k==='x_start'||k==='x_end') rod[k]=Math.round(ix);
+    else rod[k]=Math.round(iy);
+    if(rod.top_y>rod.bottom_y){const t=rod.top_y;rod.top_y=rod.bottom_y;rod.bottom_y=t;}
+    rod.axis_y=Math.min(Math.max(rod.axis_y,rod.top_y),rod.bottom_y);
+  }
+  draw();
+}
+function onUp(){ dragging=null; }
+canvas.addEventListener('mousedown',onDown); canvas.addEventListener('mousemove',onMove);
+window.addEventListener('mouseup',onUp);
+canvas.addEventListener('touchstart',onDown,{passive:false});
+canvas.addEventListener('touchmove',onMove,{passive:false});
+canvas.addEventListener('touchend',onUp);
+
+// ============ 抽出 ============
+async function runExtract(){
+  if(!job)return;
+  $('exStatus').textContent='⏳ 抽出中...';
+  $('exWarnings').innerHTML=''; $('result').innerHTML='';
+  try{
+    const r = await fetch(API + '/api/extract', {method:'POST',
+      headers:{'X-API-Key':KEY,'Content-Type':'application/json'},
+      body: JSON.stringify({job_id:job.job_id, chart_box:chartPts, rod:rod, save:true})});
+    const j = await r.json();
+    if(!r.ok) throw new Error(j.detail?.message || j.detail || JSON.stringify(j).slice(0,200));
+    showWarnings($('exWarnings'), j.warnings);
+    const de = j.ccm_residual.mean_dE00;
+    $('exStatus').innerHTML = `✅ 抽出完了 — チャート補正精度 ΔE00 ${de.toFixed(2)} ` +
+      (de<=2?'<span class="ok">(良好)</span>':de<=4?'<span style="color:var(--yellow)">(可)</span>':'<span class="ng">(要改善)</span>') +
+      (j.saved ? ' / DB保存済み' : ' / <b class="ng">DB保存失敗 (警告参照)</b>');
+    let html='<div class="swrow">';
+    for(const a of Object.keys(j.swatches)){
+      const lab=j.visual_labs[a];
+      html+=`<div class="sw"><div class="box" style="background:${j.swatches[a]}"></div>
+        <div><b>${a}°</b></div><div class="lab">L*${lab[0]}<br>a*${lab[1]} b*${lab[2]}</div></div>`;
+    }
+    html+='</div>';
+    $('result').innerHTML=html;
+    loadSamples();
+  }catch(e){ $('exStatus').textContent='❌ '+e.message; }
+}
+
+// ============ 一覧 & 学習 ============
+async function loadSamples(){
+  if(!API)return;
+  $('listStatus').textContent='読込中...';
+  try{
+    const r=await fetch(API+'/api/samples',{headers:{'X-API-Key':KEY}});
+    const j=await r.json();
+    $('listStatus').textContent=`${j.count}件 処理済み`;
+    let html='<table><tr><th>サンプル</th><th>0°</th><th>45°</th><th>チャートΔE</th><th>日時</th></tr>';
+    for(const s of j.samples){
+      const l0=s.visual_labs?.['0'], l45=s.visual_labs?.['45'];
+      html+=`<tr><td><b>${s.sample_name}</b></td>
+        <td>${l0?`L*${l0[0]}`:'—'}</td><td>${l45?`L*${l45[0]}`:'—'}</td>
+        <td>${s.ccm_residual?s.ccm_residual.mean_dE00.toFixed(2):'—'}</td>
+        <td style="color:var(--sub)">${(s.created_at||'').slice(0,16).replace('T',' ')}</td></tr>`;
+    }
+    $('sampleList').innerHTML=html+'</table>';
+  }catch(e){ $('listStatus').textContent='❌ '+e.message; }
+}
+
+async function runLearn(){
+  $('learnResult').innerHTML='⏳ 学習中... (数十秒かかります)';
+  try{
+    const r=await fetch(API+'/api/learn',{method:'POST',headers:{'X-API-Key':KEY}});
+    const j=await r.json();
+    if(!r.ok) throw new Error(j.detail?.message || JSON.stringify(j.detail||j).slice(0,300));
+    let html='<div class="status">✅ 学習完了 — 対象 '+j.n_matched+'件 '+(j.saved?'/ シミュレーターに反映済み (次回読込時に適用)':'/ <b class=ng>モデル保存失敗</b>')+'</div>';
+    html+='<table><tr><th>角度</th><th>n</th><th>LOOCV平均ΔE00</th><th>最大</th><th>最悪サンプル</th><th>判定</th></tr>';
+    for(const a of Object.keys(j.model.validation)){
+      const v=j.model.validation[a];
+      if(v.error){ html+=`<tr><td>${a}°</td><td colspan=5 class=ng>${v.error}</td></tr>`; continue; }
+      const m=v.loocv_mean_dE00;
+      const verdict = m<=3?'<span class=ok>✅ 良好</span>':m<=5?'<span style="color:var(--yellow)">⚠️ 実用可</span>':'<span class=ng>❌ 要改善</span>';
+      html+=`<tr><td>${a}°</td><td>${j.model.per_angle[a]?.n_samples||''}</td><td>${m}</td><td>${v.loocv_max_dE00}</td><td>${v.loocv_worst_sample}</td><td>${verdict}</td></tr>`;
+    }
+    html+='</table>';
+    showWarnings($('learnResult'), j.warnings);
+    $('learnResult').innerHTML = html + $('learnResult').innerHTML;
+  }catch(e){ $('learnResult').innerHTML='❌ '+e.message; }
+}
+
+if(API) { saveSettings(); loadSamples(); }
+</script>
+</body>
+</html>
